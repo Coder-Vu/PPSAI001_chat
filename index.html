@@ -56,9 +56,15 @@
       padding:8px 12px; border-bottom:1px solid var(--bubble-border); background:#fff;
     }
     header .title{ text-align:center; flex:1 }
-    header img{ height:40px; max-height:40px; width:auto; object-fit:contain; display:block; margin:0 auto 4px }
+    /* Logo responsive: min 36px - max 72px */
+    header img{
+      height:clamp(36px, 6vw, 72px);
+      max-height:clamp(36px, 6vw, 72px);
+      width:auto; object-fit:contain; display:block; margin:0 auto 4px
+    }
     header h1{ margin:0; font-size:20px }
-    header p{ margin:4px 0 0; font-size:13px; color:#555 }
+    /* Mô tả = 16px (bằng #prompt) */
+    header p{ margin:4px 0 0; font-size:16px; color:#555 }
     header button.signout{
       padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
     }
@@ -101,6 +107,19 @@
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
     .typing{ font-style:italic; color:var(--muted) }
 
+    /* Nút mũi tên cuộn về cuối (SVG, nền trắng – mũi tên đen, viền nhẹ) */
+    #scrollBtn{
+      position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
+      background:#fff; color:#000; border:1px solid #e5e7eb;
+      border-radius:50%; width:48px; height:48px; cursor:pointer;
+      box-shadow:0 2px 6px rgba(0,0,0,.15);
+      display:flex; align-items:center; justify-content:center;
+      opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;
+      z-index:10;
+    }
+    #scrollBtn svg{ width:22px; height:22px; display:block }
+    #scrollBtn.show{ opacity:1; visibility:visible }
+
     @media (max-width:600px){
       .chat-wrapper{ max-width:100%; height:100dvh; border-radius:0 }
       header h1{ font-size:18px }
@@ -131,6 +150,13 @@
     </header>
 
     <div id="chat"></div>
+
+    <!-- Nút mũi tên SVG chevron-down kiểu ChatGPT -->
+    <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
     <footer id="appFooter">
       <div class="footer-inner">
@@ -221,7 +247,7 @@ async function checkAccess(){
   }
 }
 
-/* Sửa lỗi "Enter bị liệt": gắn cả click & Enter */
+/* Sửa Enter + click */
 loginBtn.addEventListener('click', checkAccess);
 accessEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); checkAccess(); } });
 
@@ -374,6 +400,29 @@ async function sendToWebhook(sessionId, message){
   else { content=data.content||data.output; image_url=data.url; }
   return { content, image_url };
 }
+
+/* === Nút mũi tên: hiện khi chưa ở đáy, ẩn khi chạm đáy === */
+(function(){
+  const chatBox = document.getElementById('chat');
+  const scrollBtn = document.getElementById('scrollBtn');
+
+  function toggleBtn(){
+    const threshold = 200; // px cách đáy
+    if (chatBox.scrollHeight - chatBox.scrollTop > chatBox.clientHeight + threshold) {
+      scrollBtn.classList.add('show');
+    } else {
+      scrollBtn.classList.remove('show');
+    }
+  }
+
+  chatBox.addEventListener('scroll', toggleBtn);
+  scrollBtn.addEventListener('click', () => {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+
+  // set trạng thái lúc load
+  toggleBtn();
+})();
 </script>
 </body>
 </html>
