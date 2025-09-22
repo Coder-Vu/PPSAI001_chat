@@ -14,7 +14,9 @@
   <style>
     :root{
       --bg:#f3f4f6; --brand:#003366; --brand-2:#0055aa; --text:#0f172a; --muted:#64748b;
-      --bubble-user:#d1e7ff; --bubble-bot:#fff; --bubble-border:#e2e8f0;
+      /* đổi màu bubble user sang xám nhạt */
+      --bubble-user:#f1f5f9;
+      --bubble-bot:#fff; --bubble-border:#e2e8f0;
       --radius:12px; --footer-h:64px;
     }
     *{box-sizing:border-box}
@@ -79,9 +81,11 @@
     #chat::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2); border-radius:4px}
     #chat::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.35)}
 
-    .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.5; word-wrap:break-word; white-space:normal;
+    .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6; word-wrap:break-word; white-space:normal;
           animation:fadeIn .18s ease; display:flex; align-items:flex-start; gap:10px }
-    .msg.assistant{ align-self:flex-start; background:var(--bubble-bot); border:1px solid var(--bubble-border) }
+    /* AI: bỏ viền và cho full khu vực chat */
+    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); border:none }
+    /* User: xám nhạt */
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
     .content{ width:100% }
@@ -99,11 +103,16 @@
       border-top:1px solid var(--bubble-border); background:#fff;
       padding:8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
     }
-    .footer-inner{ display:flex; gap:8px }
+    /* Chỉ textarea co giãn, nút Send cố định kích thước */
+    .footer-inner{ display:flex; gap:8px; align-items:flex-end }
+    /* đổi input -> textarea: tự co giãn + scroll khi vượt giới hạn */
     #prompt{
-      flex:1; padding:12px 12px; border:1px solid var(--bubble-border); border-radius:999px; outline:none; font-size:16px
+      flex:1; padding:12px 12px; border:1px solid var(--bubble-border); border-radius:12px; outline:none; font-size:16px;
+      resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
     }
     button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
+    /* Send: cố định, chữ = 14px */
+    #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
     .typing{ font-style:italic; color:var(--muted) }
 
@@ -160,7 +169,8 @@
 
     <footer id="appFooter">
       <div class="footer-inner">
-        <input id="prompt" placeholder="Type to search, analyze, or request..." />
+        <!-- ĐỔI SANG TEXTAREA -->
+        <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
         <button id="sendBtn">Send</button>
       </div>
     </footer>
@@ -303,7 +313,20 @@ function saveMessages(arr){
 let messages=loadMessages(); renderHistory(messages);
 
 btnEl.addEventListener('click',onSend);
-inputEl.addEventListener('keydown',e=>{ if(e.key==='Enter') onSend(); });
+/* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
+inputEl.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }
+});
+function autosizeTextarea(el){
+  el.style.height='auto';
+  const max=Math.round(window.innerHeight*0.40); // ~40vh
+  const h=Math.min(el.scrollHeight, max);
+  el.style.height=h+'px';
+  el.style.overflowY=(el.scrollHeight>max)?'auto':'hidden';
+}
+inputEl.addEventListener('input',()=>autosizeTextarea(inputEl));
+window.addEventListener('resize',()=>autosizeTextarea(inputEl));
+autosizeTextarea(inputEl);
 
 /* Mở link trong tab mới */
 chatEl.addEventListener('click',(e)=>{
@@ -318,7 +341,8 @@ function onSend(){
   appendBubble(text,'user');
   messages.push({ role:'user', content:text, ts: Date.now() }); saveMessages(messages);
 
-  inputEl.value=''; typing(true);
+  inputEl.value=''; autosizeTextarea(inputEl); // reset chiều cao
+  typing(true);
   sendToWebhook(sessionId,text).then(({content,image_url})=>{
     typing(false);
     appendBubble(content||'(không có nội dung)','assistant',image_url);
