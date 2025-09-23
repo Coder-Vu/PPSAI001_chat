@@ -177,7 +177,7 @@
   <div id="login" class="login-wrapper">
     <h2>🔑 Please Sign in</h2>
     <input id="accessInput" type="password" placeholder="Enter Access Code" />
-    <small>Please enter the Access code provided by the admin</small>
+    <small>Please enter the Access code provided by the admin.</small>
     <button id="loginBtn">Enter</button>
     <p id="loginMsg" style="color:red; display:none; margin-top:8px;">Invalid Access Code</p>
   </div>
@@ -248,7 +248,7 @@ const signoutBtn= document.getElementById('signoutBtn');
 
 function resetInactivityTimer(){
   clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(()=>{ alert("Session timed out"); signOut(); }, AUTO_LOGOUT_MS);
+  inactivityTimer = setTimeout(()=>{ alert("Session timed out."); signOut(); }, AUTO_LOGOUT_MS);
 }
 function initInactivityListeners(){
   ["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{
@@ -263,7 +263,7 @@ async function checkAccess(){
 
   loginBtn.disabled = true;
   const oldLabel = loginBtn.textContent;
-  loginBtn.textContent = 'Verifying...';
+  loginBtn.textContent = 'Đang kiểm tra...';
   loginMsg.style.display='none';
 
   try{
@@ -284,7 +284,7 @@ async function checkAccess(){
       loginMsg.style.display = 'block';
     }
   }catch(e){
-    loginMsg.textContent = 'Unable to connect. Please try again.';
+    loginMsg.textContent = 'Không kết nối được /api/login.';
     loginMsg.style.display = 'block';
   }finally{
     loginBtn.disabled = false;
