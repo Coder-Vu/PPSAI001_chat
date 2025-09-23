@@ -18,21 +18,30 @@
       --bubble-user:#f1f5f9;
       --bubble-bot:#fff; --bubble-border:#e2e8f0;
       --radius:12px; --footer-h:64px;
+
+      /* Bộ font hiện đại (giống ChatGPT) dùng chung toàn UI */
+      --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, "Helvetica Neue", Arial, sans-serif,
+                 "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     }
     *{box-sizing:border-box}
     html,body{height:100%; margin:0}
     body{
       background:var(--bg); color:var(--text);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;
+      font-family:var(--ui-font);
       display:flex; justify-content:center; align-items:stretch;
       min-height:100dvh;
     }
+    /* Bảo đảm input/textarea/button cũng dùng đúng font (một số browser không kế thừa) */
+    input, textarea, button { font-family: var(--ui-font); }
+
     .hidden{display:none!important}
 
     /* Login */
     .login-wrapper{
       width:100%; max-width:400px; background:#fff; padding:32px; border-radius:var(--radius);
       box-shadow:0 4px 14px rgba(0,0,0,.08); text-align:center; margin:16px;
+      font-family:var(--ui-font);
     }
     .login-wrapper h2{margin-bottom:16px}
     .login-wrapper input{
@@ -51,11 +60,13 @@
       background:#fff; border:1px solid var(--bubble-border); border-radius:var(--radius);
       display:flex; flex-direction:column; box-shadow:0 4px 14px rgba(0,0,0,.08);
       overflow:hidden;
+      font-family:var(--ui-font);
     }
     header{
       position:sticky; top:0; z-index:5;
       display:flex; justify-content:space-between; align-items:center;
       padding:8px 12px; border-bottom:1px solid var(--bubble-border); background:#fff;
+      font-family:var(--ui-font);
     }
     header .title{ text-align:center; flex:1 }
     /* Logo responsive: min 36px - max 72px */
@@ -76,19 +87,21 @@
       flex:1; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:12px;
       scroll-behavior:smooth; background:#fff;
       padding-bottom:calc(var(--footer-h) + env(safe-area-inset-bottom, 0px) + 12px);
+      font-family:var(--ui-font);
     }
     #chat::-webkit-scrollbar{width:6px}
     #chat::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2); border-radius:4px}
     #chat::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.35)}
 
     .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6; word-wrap:break-word; white-space:normal;
-          animation:fadeIn .18s ease; display:flex; align-items:flex-start; gap:10px }
+          animation:fadeIn .18s ease; display:flex; align-items:flex-start; gap:10px;
+          font-family:var(--ui-font); }
     /* AI: bỏ viền và cho full khu vực chat */
     .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); border:none }
     /* User: xám nhạt */
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
-    .content{ width:100% }
+    .content{ width:100%; font-family:var(--ui-font); }
     .content a{ color:#0ea5e9; text-decoration:underline }
     .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
     .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
@@ -102,6 +115,7 @@
       position:sticky; bottom:0; z-index:5;
       border-top:1px solid var(--bubble-border); background:#fff;
       padding:8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      font-family:var(--ui-font);
     }
     /* Chỉ textarea co giãn, nút Send cố định kích thước */
     .footer-inner{ display:flex; gap:8px; align-items:flex-end }
@@ -109,20 +123,21 @@
     #prompt{
       flex:1; padding:12px 12px; border:1px solid var(--bubble-border); border-radius:12px; outline:none; font-size:16px;
       resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
+      font-family:var(--ui-font);
     }
 
-   
-   /* cỡ chữ & màu của placeholder */
+    /* cỡ chữ & màu của placeholder */
     #prompt::placeholder{        /* chuẩn */
       font-size:13px;            /* chỉnh kích cỡ placeholder ở đây */
       color:#9aa4b2;             /* tuỳ chọn: nhạt hơn */
+      font-family:var(--ui-font);
     }
-   
-   /* iOS/Safari */
+    /* iOS/Safari */
     #prompt::-webkit-input-placeholder{
       font-size:13px;
       color:#9aa4b2;
-   }
+      font-family:var(--ui-font);
+    }
 
     @media (max-width:600px){
      #prompt{ font-size:15px; }
@@ -130,7 +145,7 @@
      #prompt::-webkit-input-placeholder{ font-size:13px; }
    }
     
-    button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
+    button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px; font-family:var(--ui-font) }
     /* Send: cố định, chữ = 14px */
     #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
@@ -144,7 +159,7 @@
       box-shadow:0 2px 6px rgba(0,0,0,.15);
       display:flex; align-items:center; justify-content:center;
       opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;
-      z-index:10;
+      z-index:10; font-family:var(--ui-font);
     }
     #scrollBtn svg{ width:22px; height:22px; display:block }
     #scrollBtn.show{ opacity:1; visibility:visible }
@@ -162,7 +177,7 @@
   <div id="login" class="login-wrapper">
     <h2>🔑 Please Sign in</h2>
     <input id="accessInput" type="password" placeholder="Enter Access Code" />
-    <small>Please enter the Access code provided by the admin.</small>
+    <small>Please enter the Access code provided by the admin</small>
     <button id="loginBtn">Enter</button>
     <p id="loginMsg" style="color:red; display:none; margin-top:8px;">Invalid Access Code</p>
   </div>
@@ -233,7 +248,7 @@ const signoutBtn= document.getElementById('signoutBtn');
 
 function resetInactivityTimer(){
   clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(()=>{ alert("Session timed out."); signOut(); }, AUTO_LOGOUT_MS);
+  inactivityTimer = setTimeout(()=>{ alert("Session timed out"); signOut(); }, AUTO_LOGOUT_MS);
 }
 function initInactivityListeners(){
   ["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{
@@ -248,7 +263,7 @@ async function checkAccess(){
 
   loginBtn.disabled = true;
   const oldLabel = loginBtn.textContent;
-  loginBtn.textContent = 'Đang kiểm tra...';
+  loginBtn.textContent = 'Verifying...';
   loginMsg.style.display='none';
 
   try{
@@ -269,7 +284,7 @@ async function checkAccess(){
       loginMsg.style.display = 'block';
     }
   }catch(e){
-    loginMsg.textContent = 'Không kết nối được /api/login.';
+    loginMsg.textContent = 'Unable to connect. Please try again.';
     loginMsg.style.display = 'block';
   }finally{
     loginBtn.disabled = false;
