@@ -2,7 +2,6 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8" />
-  <!-- FIX: giữ viewport chuẩn, không chặn pinch-zoom để đảm bảo accessibility -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>PPS AI Chat</title>
   <link rel="icon" href="favicon.png" type="image/png">
@@ -15,120 +14,103 @@
   <style>
     :root{
       --bg:#f3f4f6; --brand:#003366; --brand-2:#0055aa; --text:#0f172a; --muted:#64748b;
-      --bubble-user:#f1f5f9;
-      --bubble-bot:#fff; --bubble-border:#e2e8f0;
+      --bubble-user:#f1f5f9; --bubble-bot:#fff; --bubble-border:#e2e8f0;
       --radius:12px; --footer-h:64px;
       --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
                  Roboto, "Helvetica Neue", Arial, sans-serif,
                  "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     }
     *{box-sizing:border-box}
-    html,body{height:100%; margin:0; -webkit-text-size-adjust:100%} /* FIX: tránh iOS tự scale chữ */
+    html,body{height:100%; margin:0; -webkit-text-size-adjust:100%}
     body{
-      background:var(--bg); color:var(--text);
-      font-family:var(--ui-font);
+      background:var(--bg); color:var(--text); font-family:var(--ui-font);
       display:flex; justify-content:center; align-items:stretch;
-      min-height:100svh; /* FIX: dùng svh cho mobile */
-      overflow-x:hidden;
+      min-height:100svh; overflow-x:hidden;
     }
     input, textarea, button { font-family: var(--ui-font); }
-
     .hidden{display:none!important}
 
     /* Login */
     .login-wrapper{
       width:100%; max-width:400px; background:#fff; padding:32px; border-radius:var(--radius);
       box-shadow:0 4px 14px rgba(0,0,0,.08); text-align:center; margin:16px;
-      font-family:var(--ui-font);
     }
-    .login-wrapper h2{
-      margin-bottom:16px;
-      font-size:clamp(18px, 4.5vw, 24px); /* FIX: responsive heading */
-      line-height:1.2;
-    }
+    .login-wrapper h2{ margin-bottom:16px; font-size:clamp(18px,4.5vw,24px); line-height:1.2 }
     .login-wrapper input{
       width:100%; padding:12px 14px; margin-bottom:8px; border:1px solid var(--bubble-border); border-radius:var(--radius);
-      font-size:16px; /* FIX: >=16px để iOS KHÔNG auto-zoom */
-      -webkit-text-size-adjust:100%;
+      font-size:16px; /* FIX: ngăn iOS auto-zoom */
     }
     .login-wrapper small{display:block; color:var(--muted); font-size:12px; margin-bottom:12px}
     .login-wrapper button{
-      width:100%; padding:12px 14px; border-radius:var(--radius); border:1px solid var(--brand);
-      background:var(--brand); color:#fff; cursor:pointer; font-size:15px;
+      width:100%; padding:12px 14px; border-radius:var(--radius);
+      border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px
     }
     .login-wrapper button:hover{background:var(--brand-2); border-color:var(--brand-2)}
 
     /* Chat wrapper */
     .chat-wrapper{
-      width:100%; max-width:920px; height:100svh; /* FIX: svh để không bị đẩy khi mở keyboard */
+      width:100%; max-width:920px; height:100svh; /* FIX: theo viewport thực */
       background:#fff; border:1px solid var(--bubble-border); border-radius:var(--radius);
       display:flex; flex-direction:column; box-shadow:0 4px 14px rgba(0,0,0,.08);
-      overflow:hidden;
-      font-family:var(--ui-font);
-      contain:layout size style; /* giúp trình duyệt layout ổn định */
+      overflow:hidden; contain:layout size style;
     }
     header{
       position:sticky; top:0; z-index:5;
       display:flex; justify-content:space-between; align-items:center;
       padding:8px 12px; border-bottom:1px solid var(--bubble-border); background:#fff;
-      font-family:var(--ui-font);
     }
     header .title{ text-align:center; flex:1 }
-    header img{
-      height:clamp(32px, 6vw, 64px); /* FIX: nhỏ lại trên mobile */
-      max-height:clamp(32px, 6vw, 64px);
-      width:auto; object-fit:contain; display:block; margin:0 auto 4px
-    }
-    header h1{
-      margin:0;
-      font-size:clamp(16px, 4.5vw, 20px); /* FIX: lời chào responsive */
-      font-weight:700;
-    }
-    header p{ margin:4px 0 0; font-size:clamp(13px, 3.8vw, 16px); color:#555 }
+    header img{ height:clamp(32px,6vw,64px); width:auto; object-fit:contain; display:block; margin:0 auto 4px }
+    header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
+    header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
     header button.signout{
-      padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
+      padding:6px 12px; border-radius:999px; border:1px solid var(--brand);
+      background:var(--brand); color:#fff; cursor:pointer; font-size:13px
     }
     header button.signout:hover{background:var(--brand-2); border-color:var(--brand-2)}
 
     #chat{
-      flex:1; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:12px;
+      flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; /* FIX: mượt, không kéo cả trang */
+      padding:12px 16px; display:flex; flex-direction:column; gap:12px;
       scroll-behavior:smooth; background:#fff;
-      padding-bottom:calc(var(--footer-h) + env(safe-area-inset-bottom, 0px) + 12px);
-      overscroll-behavior:contain; /* FIX: hạn chế nhảy view khi bàn phím mở */
+      padding-bottom:calc(var(--footer-h) + env(safe-area-inset-bottom,0px) + 12px);
+      overscroll-behavior:contain;
     }
     #chat::-webkit-scrollbar{width:6px}
     #chat::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2); border-radius:4px}
     #chat::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.35)}
 
-    .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6; word-wrap:break-word; white-space:normal;
-          animation:fadeIn .18s ease; display:flex; align-items:flex-start; gap:10px; }
-    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); border:none }
+    .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
+          word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
+          display:flex; align-items:flex-start; gap:10px }
+    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
-    .content{ width:100%; }
     .content a{ color:#0ea5e9; text-decoration:underline }
     .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
     .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
     .content th,.content td{ border:1px solid var(--bubble-border); padding:6px 8px; text-align:left }
-    .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
+    .content code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
     @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
 
+    /* FIX: Footer cố định dưới viewport + co theo keyboard */
     footer{
-      position:sticky; bottom:0; z-index:5;
+      position:fixed; left:50%; transform:translateX(-50%);
+      width:min(920px, 100%); bottom:0; z-index:6;
       border-top:1px solid var(--bubble-border); background:#fff;
-      padding:8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));
     }
     .footer-inner{ display:flex; gap:8px; align-items:flex-end }
     #prompt{
-      flex:1; padding:12px 12px; border:1px solid var(--bubble-border); border-radius:12px; outline:none; font-size:16px; /* FIX: >=16px để tránh iOS zoom */
+      flex:1; padding:12px 12px; border:1px solid var(--bubble-border); border-radius:12px;
+      outline:none; font-size:16px; /* FIX: tránh iOS zoom */
       resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
     }
-    #prompt::placeholder{ font-size:13px; color:#9aa4b2; }
-    #prompt::-webkit-input-placeholder{ font-size:13px; color:#9aa4b2; }
+    #prompt::placeholder, #prompt::-webkit-input-placeholder{ font-size:13px; color:#9aa4b2 }
 
-    button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px; }
+    button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
     #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
     .typing{ font-style:italic; color:var(--muted) }
@@ -140,19 +122,16 @@
       box-shadow:0 2px 6px rgba(0,0,0,.15);
       display:flex; align-items:center; justify-content:center;
       opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;
-      z-index:10;
+      z-index:7;
     }
     #scrollBtn svg{ width:22px; height:22px; display:block }
     #scrollBtn.show{ opacity:1; visibility:visible }
 
-    /* Khi bàn phím mở trên mobile, thêm chút khoảng trống phía dưới để ô nhập không bị "nhảy" */
-    body.kbd-open footer{ padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); }
-    body.kbd-open .chat-wrapper{ height:100svh; } /* đảm bảo luôn fit viewport còn lại */
-
+    /* Khi bàn phím mở: khóa body scroll để không "kéo tuốt lên" */
+    body.kbd-open{ overflow:hidden }
     @media (max-width:600px){
       .chat-wrapper{ max-width:100%; height:100svh; border-radius:0 }
-      header h1{ font-size:clamp(16px, 4.5vw, 20px) }
-      header img{ height:36px; max-height:36px }
+      header img{ height:36px }
     }
   </style>
 </head>
@@ -199,7 +178,9 @@
 (function(){
   const footer = document.getElementById('appFooter');
   const chat = document.getElementById('chat');
+  const wrap = document.querySelector('.chat-wrapper');
 
+  // Cập nhật biến --footer-h để chèn khoảng trống trong vùng chat
   function applyFooterHeight(){
     const h = footer?.offsetHeight || 64;
     document.documentElement.style.setProperty('--footer-h', h + 'px');
@@ -208,29 +189,46 @@
   window.addEventListener('resize', applyFooterHeight);
   if (footer && 'ResizeObserver' in window) new ResizeObserver(applyFooterHeight).observe(footer);
 
-  // FIX: ổn định chiều cao khi bàn phím mở (iOS Safari)
-  if (window.visualViewport) {
+  // FIX: Ghim footer theo đáy viewport và cộng thêm keyboard inset (iOS)
+  function setViewportBindings(){
+    if (!window.visualViewport) return;
     const vv = window.visualViewport;
+
     const setHeights = () => {
-      const wrap = document.querySelector('.chat-wrapper');
+      // Chiều cao khung chat bằng chiều cao viewport thực tế
       if (wrap) wrap.style.height = vv.height + 'px';
-      // Gắn class để CSS tinh chỉnh padding khi keyboard mở
-      if (vv.height < window.innerHeight - 80) {
-        document.body.classList.add('kbd-open'); 
+
+      // Tính phần chồng lấn (keyboard height)
+      const kb = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+      footer.style.bottom = kb + 'px';   // Đặt footer ngay trên bàn phím
+
+      // Khi keyboard mở → khóa body scroll để không nhảy trang
+      if (kb > 0) {
+        document.body.classList.add('kbd-open');
       } else {
         document.body.classList.remove('kbd-open');
       }
-      chat.scrollTop = chat.scrollHeight; // luôn neo đáy
+
+      // Neo chat về đáy
+      chat.scrollTop = chat.scrollHeight;
     };
+
     vv.addEventListener('resize', setHeights);
     vv.addEventListener('scroll', setHeights);
     setHeights();
   }
+  setViewportBindings();
 
+  // Khi focus ô nhập: neo đáy + giữ trang ở (0,0)
   const input = document.getElementById('prompt');
-  input.addEventListener('focus', () => { 
-    // FIX: chờ keyboard mở rồi cuộn đáy
-    setTimeout(()=> chat.scrollTop = chat.scrollHeight, 120);
+  input.addEventListener('focus', () => {
+    setTimeout(() => {
+      window.scrollTo(0,0);           // FIX: tránh cuộn body lên trên
+      chat.scrollTop = chat.scrollHeight;
+    }, 120);
+  });
+  input.addEventListener('blur', () => {
+    document.body.classList.remove('kbd-open');
   });
 })();
 </script>
@@ -355,7 +353,7 @@ inputEl.addEventListener('keydown',e=>{
 });
 function autosizeTextarea(el){
   el.style.height='auto';
-  const max=Math.round(window.innerHeight*0.40); // ~40vh
+  const max=Math.round(window.innerHeight*0.40);
   const h=Math.min(el.scrollHeight, max);
   el.style.height=h+'px';
   el.style.overflowY=(el.scrollHeight>max)?'auto':'hidden';
@@ -377,7 +375,7 @@ function onSend(){
   appendBubble(text,'user');
   messages.push({ role:'user', content:text, ts: Date.now() }); saveMessages(messages);
 
-  inputEl.value=''; autosizeTextarea(inputEl); // reset chiều cao
+  inputEl.value=''; autosizeTextarea(inputEl);
   typing(true);
   sendToWebhook(sessionId,text).then(({content,image_url})=>{
     typing(false);
