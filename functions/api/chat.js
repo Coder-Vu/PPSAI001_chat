@@ -3,14 +3,24 @@ import { getAuthCookie, unauthorized, setAuthCookie, envPick } from "./_util.js"
 export async function onRequestPost({ request, env }) {
   if (getAuthCookie(request) !== "1") return unauthorized();
 
-  const url = envPick(env, ["N8N_WEBHOOK_URL", "N8n_webhook_url", "n8n_webhook_url"]);
+  const url = envPick(env, [
+    "N8N_WEBHOOK_URL",
+    "N8n_webhook_url",
+    "n8n_webhook_url",
+  ]);
   if (!url) {
-    return new Response(JSON.stringify({ ok:false, error:"missing N8N_WEBHOOK_URL" }), {
-      status: 500, headers: { "content-type": "application/json" }
-    });
+    return new Response(
+      JSON.stringify({ ok: false, error: "missing N8N_WEBHOOK_URL" }),
+      {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      }
+    );
   }
 
-  const method = (envPick(env, ["N8N_METHOD", "N8n_method"]) || "POST").toUpperCase();
+  const method = (
+    envPick(env, ["N8N_METHOD", "N8n_method"]) || "POST"
+  ).toUpperCase();
   const headers = new Headers();
 
   // 1) Authorization: Bearer <token> (nếu có)
@@ -19,7 +29,7 @@ export async function onRequestPost({ request, env }) {
 
   // 2) Header tuỳ biến (nếu webhook yêu cầu)
   const hName = envPick(env, ["N8N_HEADER_NAME", "N8n_header_name"]);
-  const hVal  = envPick(env, ["N8N_HEADER_VALUE", "N8n_header_value"]);
+  const hVal = envPick(env, ["N8N_HEADER_VALUE", "N8n_header_value"]);
   if (hName && hVal) headers.set(hName, hVal);
 
   // Kiểm tra nếu là endpoint /api/chat/stream thì xử lý streaming SSE
@@ -27,20 +37,25 @@ export async function onRequestPost({ request, env }) {
   const isStream = urlPath.endsWith("/stream");
 
   if (isStream) {
-    // Forward stream sang N8N (SSE)
+    // Forward stream sang N8N (SSE passthrough)
     const bodyText = await request.text();
     headers.set("content-type", "application/json");
 
-    const upstream = await fetch(url, { method: "POST", headers, body: bodyText });
+    const upstream = await fetch(url, {
+      method: "POST",
+      headers,
+      body: bodyText,
+    });
 
-    // Trả stream về client (SSE giữ nguyên)
+    // Trả stream về client (không buffer)
     const refreshCookie = setAuthCookie("1", 30 * 60);
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
-        "content-type": "text/event-stream",
+        "content-type":
+          upstream.headers.get("content-type") || "text/event-stream",
         "cache-control": "no-cache",
-        "connection": "keep-alive",
+        connection: "keep-alive",
         "Set-Cookie": refreshCookie,
       },
     });
@@ -57,11 +72,15 @@ export async function onRequestPost({ request, env }) {
   }
 
   const text = await upstream.text();
-  const contentType = upstream.headers.get("content-type") || "application/json";
+  const contentType =
+    upstream.headers.get("content-type") || "application/json";
   const refreshCookie = setAuthCookie("1", 30 * 60);
 
   return new Response(text, {
     status: upstream.status,
-    headers: { "content-type": contentType, "Set-Cookie": refreshCookie },
+    headers: {
+      "content-type": contentType,
+      "Set-Cookie": refreshCookie,
+    },
   });
 }
