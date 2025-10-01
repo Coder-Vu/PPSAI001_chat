@@ -11,17 +11,14 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
 
-  <!-- UPDATE: Đồng bộ phông chữ giống ChatGPT (Inter) -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-
   <style>
     :root{
       --bg:#f3f4f6; --brand:#003366; --brand-2:#0055aa; --text:#0f172a; --muted:#64748b;
       --bubble-user:#f1f5f9; --bubble-bot:#fff; --bubble-border:#e2e8f0;
       --radius:12px; --footer-h:64px;
-      /* UPDATE: Thay font mặc định sang Inter để đồng bộ ChatGPT */
-      --ui-font: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-                 Roboto, "Helvetica Neue", Arial, sans-serif;
+      --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, "Helvetica Neue", Arial, sans-serif,
+                 "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     }
     *{box-sizing:border-box}
     html,body{height:100%; margin:0; -webkit-text-size-adjust:100%}
@@ -67,25 +64,31 @@
     header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
     header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
 
-    /* UPDATE: Khu vực controls dùng menu 3 chấm ngang + dropdown chứa Sign out */
+    /* Chỉ còn nút Sign out (bỏ toggle) */
     header .controls{ display:flex; gap:10px; align-items:center }
-    .menu-container{ position:relative; }
-    .menu-btn{
-      background:none; border:none; cursor:pointer; padding:6px 10px;
-      font-size:28px; line-height:1; user-select:none;
+
+    header button.signout{
+      padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
     }
-    .dropdown{
-      position:absolute; right:0; top:100%;
-      background:#fff; border:1px solid var(--bubble-border); border-radius:8px;
-      min-width:140px; box-shadow:0 4px 12px rgba(0,0,0,.12);
-      display:none; flex-direction:column; z-index:10; overflow:hidden;
+    header button.signout:hover{background:var(--brand-2); border-color:var(--brand-2)}
+
+    /* UPDATED: Kebab menu (3 chấm) ở header */
+    .kebab{
+      position:relative; display:inline-flex; align-items:center; justify-content:center;
+      width:36px; height:36px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer;
     }
-    .dropdown.show{ display:flex; }
-    .dropdown button{
-      background:none; border:none; padding:10px 12px; text-align:left;
-      font-size:14px; cursor:pointer; width:100%;
+    .kebab:hover{ background:#f8fafc }
+    .kebab svg{ width:18px; height:18px }
+    .kebab-menu{
+      position:absolute; top:44px; right:0; background:#fff; border:1px solid #e5e7eb; border-radius:8px;
+      box-shadow:0 8px 20px rgba(0,0,0,.12); min-width:160px; padding:8px; display:none; z-index:10;
     }
-    .dropdown button:hover{ background:#f1f5f9; }
+    .kebab-menu.show{ display:block }
+    .kebab-item{
+      width:100%; text-align:left; background:#fff; border:1px solid transparent; border-radius:8px;
+      padding:8px 10px; cursor:pointer; font-size:14px; color:#111827;
+    }
+    .kebab-item:hover{ background:#f3f4f6; }
 
     #chat{
       flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -119,20 +122,19 @@
       border-top:1px solid var(--bubble-border); background:#fff;
       padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));
     }
-    .footer-inner{ display:flex; gap:8px; align-items:flex-end }
+    .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative; } /* UPDATED: relative để đặt nút gửi trong ô nhập */
+
     #prompt{
-      /* UPDATE: tạo “ô tròn” như ChatGPT & chừa chỗ cho nút gửi nằm trong ô */
-      flex:1; padding:12px 48px 12px 12px; border:1px solid var(--bubble-border); border-radius:999px;
+      flex:1; padding:12px 48px 12px 12px; /* UPDATED: chừa chỗ bên phải cho nút gửi */
+      border:1px solid var(--bubble-border); border-radius:12px;
       outline:none; font-size:16px;
       resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
-      background:#fff;
     }
     #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
 
-    /* Giữ style chung của button để không ảnh hưởng phần khác */
     button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
+    #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
-
     .typing{ font-style:italic; color:var(--muted) }
 
     #scrollBtn{
@@ -153,20 +155,18 @@
       header img{ height:36px }
     }
 
-    /* UPDATE: Nút gửi tròn, mũi tên trắng đi lên, nằm trong ô nhập (giống ChatGPT) */
-    #sendBtn{
-      position:relative;
-      margin-left:-44px; /* đè vào trong ô nhập */
-      width:40px; height:40px; border-radius:50%;
-      border:1px solid #000; background:#000; color:#fff;
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer; flex:0 0 auto;
-      visibility:hidden; /* ẩn mặc định, chỉ hiện khi có text */
-      padding:0; /* ghi đè padding chung */
+    /* UPDATED: Nút gửi tròn đen bên trong ô nhập (giống ChatGPT) */
+    .inbox-send{
+      position:absolute; right:18px; bottom:14px; width:36px; height:36px;
+      border-radius:999px; background:#111; color:#fff; border:none; display:none;
+      align-items:center; justify-content:center; cursor:pointer;
     }
-    /* Mũi tên đi lên: dùng path → xoay -45deg cho đúng kiểu ChatGPT */
-    #sendBtn svg{ width:18px; height:18px; transform:rotate(-45deg); }
-    #sendBtn.show{ visibility:visible; }
+    .inbox-send svg{ width:18px; height:18px; }
+    .inbox-send.show{ display:inline-flex; }
+    .inbox-send:disabled{ opacity:.5; cursor:not-allowed; }
+
+    /* UPDATED: Ẩn nút Send cũ nhưng không xóa để giữ nguyên mã gốc */
+    #sendBtn{ display:none !important; }
   </style>
 </head>
 <body>
@@ -189,34 +189,38 @@
       <p>I am the AI Agent of PPS, here to support you 24/7</p>
     </div>
     <div class="controls">
-      <!-- UPDATE: Thay nút “Sign out” bằng menu 3 chấm ngang + dropdown chứa “Sign out” -->
-      <div class="menu-container">
-        <button class="menu-btn" id="menuBtn" aria-label="Menu">⋯</button>
-        <div class="dropdown" id="menuDropdown">
-          <button id="signoutBtn">Sign out</button>
+      <!-- UPDATED: Thay nút Sign out bằng kebab menu 3 chấm -->
+      <div class="kebab" id="kebabBtn" aria-label="More">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="6" cy="12" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="18" cy="12" r="2"></circle>
+        </svg>
+        <div class="kebab-menu" id="kebabMenu">
+          <button class="kebab-item" id="kebabSignOut">Sign out</button>
         </div>
       </div>
+      <!-- Giữ nguyên nút signout gốc nhưng ẩn đi để không thay đổi logic khác -->
+      <button class="signout hidden" id="signoutBtn">Sign out</button> <!-- UPDATED: giữ lại để dùng lại hàm signOut() -->
     </div>
   </header>
-
   <div id="chat"></div>
-
   <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
-
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <!-- UPDATE: Nút gửi tròn icon mũi tên đi lên; ẩn nếu chưa nhập -->
-      <button id="sendBtn" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
+      <!-- UPDATED: Nút gửi mới trong ô nhập -->
+      <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14"></path>
+          <path d="M12 5l7 7-7 7"></path>
         </svg>
       </button>
+      <button id="sendBtn">Send</button> <!-- vẫn giữ nguyên phần gốc, đã ẩn bằng CSS -->
     </div>
   </footer>
 </div>
@@ -263,20 +267,10 @@ const chatBox=document.getElementById('chatUI');
 const loginMsg=document.getElementById('loginMsg');
 const signoutBtn=document.getElementById('signoutBtn');
 
-/* UPDATE: Logic menu 3 chấm ngang (mở/đóng dropdown) */
-(function(){
-  const menuBtn=document.getElementById('menuBtn');
-  const menuDropdown=document.getElementById('menuDropdown');
-  menuBtn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    menuDropdown.classList.toggle('show');
-  });
-  window.addEventListener('click', (e)=>{
-    if(!e.target.closest('.menu-container')){
-      menuDropdown.classList.remove('show');
-    }
-  });
-})();
+/* UPDATED: Kebab trigger */
+const kebabBtn=document.getElementById('kebabBtn');
+const kebabMenu=document.getElementById('kebabMenu');
+const kebabSignOut=document.getElementById('kebabSignOut');
 
 function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
 function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
@@ -300,6 +294,19 @@ async function signOut(){
 }
 signoutBtn.addEventListener('click',signOut);
 (async()=>{const r=await fetch("/api/session").catch(()=>null);if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}})();
+
+/* UPDATED: Kebab open/close + action */
+kebabBtn?.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  kebabMenu.classList.toggle('show');
+});
+document.addEventListener('click', (e)=>{
+  if(!kebabBtn.contains(e.target)) kebabMenu.classList.remove('show');
+});
+kebabSignOut?.addEventListener('click', ()=>{
+  kebabMenu.classList.remove('show');
+  signOut();
+});
 </script>
 
 <script>
@@ -329,14 +336,19 @@ function saveMessages(arr){
 }
 let messages=loadMessages();renderHistory(messages);
 
-/* UPDATE: Chỉ hiển thị nút gửi khi có nội dung nhập */
-function toggleSendVisibility(){
-  if(inputEl.value.trim()){ btnEl.classList.add('show'); }
-  else{ btnEl.classList.remove('show'); }
+/* UPDATED: Nút gửi mới trong ô nhập (hiện khi có nội dung) */
+const inboxSend=document.getElementById('inboxSend');
+function toggleInboxSend(){
+  const hasText=!!inputEl.value.trim();
+  inboxSend.classList.toggle('show', hasText);
+  inboxSend.disabled=!hasText;
 }
-toggleSendVisibility();
+inputEl.addEventListener('input', toggleInboxSend);
+toggleInboxSend();
 
-btnEl.addEventListener('click',onSend);
+btnEl.addEventListener('click',onSend); // Giữ nguyên binding cũ (dù đã ẩn)
+inboxSend.addEventListener('click',onSend); // UPDATED: gửi bằng nút tròn trong ô nhập
+
 /* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
 inputEl.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();onSend();}
@@ -348,7 +360,7 @@ function autosizeTextarea(el){
   el.style.height=h+'px';
   el.style.overflowY=(el.scrollHeight>max)?'auto':'hidden';
 }
-inputEl.addEventListener('input',()=>{autosizeTextarea(inputEl);toggleSendVisibility();});
+inputEl.addEventListener('input',()=>autosizeTextarea(inputEl));
 window.addEventListener('resize',()=>autosizeTextarea(inputEl));
 autosizeTextarea(inputEl);
 
@@ -403,7 +415,7 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* STREAMING: SSE/NDJSON — chỉ ghép phần text, không dump JSON thô */
+/* STREAMING: SSE/NDJSON */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -440,13 +452,12 @@ async function streamFromWebhook(sessionId,message,targetNode){
       let parsed=null;
       if(line.startsWith('{')||line.startsWith('[')){try{parsed=JSON.parse(line);}catch{}}
       if(parsed&&typeof parsed==='object'){
-        /* UPDATE: chỉ nhận phần text theo format của N8N stream */
         if(parsed.type==='item'&&typeof parsed.content==='string'){acc+=parsed.content;}
         else if(parsed.type==='end'){buffer='';break;}
         else if(typeof parsed.delta==='string'){acc+=parsed.delta;}
         else if(typeof parsed.content==='string'){acc+=parsed.content;}
       }else{
-        acc+=line; /* nếu không phải JSON → coi là text chunk */
+        acc+=line;
       }
     }
     targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
@@ -455,6 +466,7 @@ async function streamFromWebhook(sessionId,message,targetNode){
   return acc;
 }
 
+/* UPDATED: Trạng thái Thinking... / Thought */
 function typing(show){
   let t=document.getElementById('typing');
   if(show&&!t){
@@ -467,25 +479,44 @@ function typing(show){
     chatEl.appendChild(t); chatEl.scrollTop=chatEl.scrollHeight;
   } else if(!show&&t){ t.remove(); }
 }
+function showThought(){
+  let t=document.createElement('div'); t.className='msg assistant typing';
+  const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
+  av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
+  t.appendChild(av);
+  const span=document.createElement('div'); span.className='content'; span.textContent='Thought';
+  t.appendChild(span);
+  chatEl.appendChild(t); chatEl.scrollTop=chatEl.scrollHeight;
+  setTimeout(()=>t.remove(), 900);
+}
 
 /* Mặc định dùng streaming; nếu lỗi sẽ fallback sang non-stream */
-function onSend(){
+async function onSend(){
   const text=inputEl.value.trim(); if(!text) return;
+
   appendBubble(text,'user');
   messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
 
-  inputEl.value=''; toggleSendVisibility(); autosizeTextarea(inputEl);
+  inputEl.value=''; autosizeTextarea(inputEl);
+  toggleInboxSend(); /* UPDATED: cập nhật hiển thị nút gửi */
+
+  /* UPDATED: hiện Thinking... trước khi tạo placeholder stream */
+  typing(true);
 
   const node=appendBubble('','assistant'); // placeholder để stream vào
-  streamFromWebhook(sessionId,text,node).then(finalText=>{
+  try{
+    const finalText=await streamFromWebhook(sessionId,text,node);
     messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
     saveMessages(messages);
-  }).catch(err=>{
+  }catch(err){
     const msg=`Error (stream): ${err}`;
     node.querySelector('.content').innerHTML=renderMarkdown(msg);
     messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
     saveMessages(messages);
-  });
+  }finally{
+    typing(false);     /* UPDATED: tắt Thinking... */
+    showThought();     /* UPDATED: flash Thought ngắn */
+  }
 }
 
 /* NON-STREAM fallback: chịu được JSON hoặc NDJSON/text trả về */
