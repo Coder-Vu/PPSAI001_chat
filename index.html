@@ -38,7 +38,7 @@
     .login-wrapper h2{ margin-bottom:16px; font-size:clamp(18px,4.5vw,24px); line-height:1.2 }
     .login-wrapper input{
       width:100%; padding:12px 14px; margin-bottom:8px; border:1px solid var(--bubble-border); border-radius:var(--radius);
-      font-size:16px; /* FIX: ngăn iOS auto-zoom */
+      font-size:16px;
     }
     .login-wrapper small{display:block; color:var(--muted); font-size:12px; margin-bottom:12px}
     .login-wrapper button{
@@ -49,7 +49,7 @@
 
     /* Chat wrapper */
     .chat-wrapper{
-      width:100%; max-width:920px; height:100svh; /* FIX: theo viewport thực */
+      width:100%; max-width:920px; height:100svh;
       background:#fff; border:1px solid var(--bubble-border); border-radius:var(--radius);
       display:flex; flex-direction:column; box-shadow:0 4px 14px rgba(0,0,0,.08);
       overflow:hidden; contain:layout size style;
@@ -64,7 +64,6 @@
     header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
     header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
 
-    /* Controls: toggle streaming + signout */
     header .controls{ display:flex; gap:10px; align-items:center }
     .stream-toggle{ font-size:13px; color:#333; display:flex; align-items:center; gap:6px; user-select:none }
     .stream-toggle input{ width:16px; height:16px }
@@ -75,7 +74,7 @@
     header button.signout:hover{background:var(--brand-2); border-color:var(--brand-2)}
 
     #chat{
-      flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; /* FIX: mượt, không kéo cả trang */
+      flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
       padding:12px 16px; display:flex; flex-direction:column; gap:12px;
       scroll-behavior:smooth; background:#fff;
       padding-bottom:calc(var(--footer-h) + env(safe-area-inset-bottom,0px) + 12px);
@@ -95,12 +94,11 @@
     .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
     .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
     .content th,.content td{ border:1px solid var(--bubble-border); padding:6px 8px; text-align:left }
-    .content code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
+    .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
     @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
 
-    /* Footer cố định dưới viewport + co theo keyboard */
     footer{
       position:fixed; left:50%; transform:translateX(-50%);
       width:min(920px, 100%); bottom:0; z-index:6;
@@ -110,7 +108,7 @@
     .footer-inner{ display:flex; gap:8px; align-items:flex-end }
     #prompt{
       flex:1; padding:12px 12px; border:1px solid var(--bubble-border); border-radius:12px;
-      outline:none; font-size:16px; /* tránh iOS zoom */
+      outline:none; font-size:16px;
       resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
     }
     #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
@@ -132,7 +130,6 @@
     #scrollBtn svg{ width:22px; height:22px; display:block }
     #scrollBtn.show{ opacity:1; visibility:visible }
 
-    /* Khi bàn phím mở: khóa body scroll để không "kéo tuốt lên" */
     body.kbd-open{ overflow:hidden }
     @media (max-width:600px){
       .chat-wrapper{ max-width:100%; height:100svh; border-radius:0 }
@@ -142,194 +139,127 @@
 </head>
 <body>
 
-  <!-- Login -->
-  <div id="login" class="login-wrapper">
-    <h2>🔑 Please Sign in</h2>
-    <input id="accessInput" type="password" placeholder="Enter Access Code" />
-    <small>Please enter the Access code provided by the admin</small>
-    <button id="loginBtn">Enter</button>
-    <p id="loginMsg" style="color:red; display:none; margin-top:8px;">Invalid Access Code</p>
-  </div>
+<!-- Login -->
+<div id="login" class="login-wrapper">
+  <h2>🔑 Please Sign in</h2>
+  <input id="accessInput" type="password" placeholder="Enter Access Code" />
+  <small>Please enter the Access code provided by the admin</small>
+  <button id="loginBtn">Enter</button>
+  <p id="loginMsg" style="color:red; display:none; margin-top:8px;">Invalid Access Code</p>
+</div>
 
-  <!-- Chat UI -->
-  <div id="chatUI" class="chat-wrapper hidden">
-    <header>
-      <div class="title">
-        <img src="logo.png" alt="PPS Logo">
-        <h1>Hi there! 👋</h1>
-        <p>I am the AI Agent of PPS, here to support you 24/7</p>
-      </div>
-
-      <!-- Toggle streaming + Sign out -->
-      <div class="controls">
-        <label class="stream-toggle" title="Toggle Server-Sent Streaming">
-          <input type="checkbox" id="toggleStream">
-          Enable Streaming
-        </label>
-        <button class="signout" id="signoutBtn">Sign out</button>
-      </div>
-    </header>
-
-    <div id="chat"></div>
-
-    <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-
-    <footer id="appFooter">
-      <div class="footer-inner">
-        <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-        <button id="sendBtn">Send</button>
-      </div>
-    </footer>
-  </div>
+<!-- Chat UI -->
+<div id="chatUI" class="chat-wrapper hidden">
+  <header>
+    <div class="title">
+      <img src="logo.png" alt="PPS Logo">
+      <h1>Hi there! 👋</h1>
+      <p>I am the AI Agent of PPS, here to support you 24/7</p>
+    </div>
+    <div class="controls">
+      <label class="stream-toggle" title="Toggle Server-Sent Streaming">
+        <input type="checkbox" id="toggleStream">
+        Enable Streaming
+      </label>
+      <button class="signout" id="signoutBtn">Sign out</button>
+    </div>
+  </header>
+  <div id="chat"></div>
+  <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <footer id="appFooter">
+    <div class="footer-inner">
+      <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
+      <button id="sendBtn">Send</button>
+    </div>
+  </footer>
+</div>
 
 <script>
-/* ===== Footer height & mobile keyboard ===== */
+/* Footer resize, keyboard handling */
 (function(){
-  const footer = document.getElementById('appFooter');
-  const chat = document.getElementById('chat');
-  const wrap = document.querySelector('.chat-wrapper');
-
+  const footer=document.getElementById('appFooter');
+  const chat=document.getElementById('chat');
+  const wrap=document.querySelector('.chat-wrapper');
   function applyFooterHeight(){
-    const h = footer?.offsetHeight || 64;
-    document.documentElement.style.setProperty('--footer-h', h + 'px');
+    const h=footer?.offsetHeight||64;
+    document.documentElement.style.setProperty('--footer-h',h+'px');
   }
   applyFooterHeight();
-  window.addEventListener('resize', applyFooterHeight);
-  if (footer && 'ResizeObserver' in window) new ResizeObserver(applyFooterHeight).observe(footer);
-
+  window.addEventListener('resize',applyFooterHeight);
+  if(footer&&'ResizeObserver'in window)new ResizeObserver(applyFooterHeight).observe(footer);
   function setViewportBindings(){
-    if (!window.visualViewport) return;
-    const vv = window.visualViewport;
-    const setHeights = () => {
-      if (wrap) wrap.style.height = vv.height + 'px';
-      const kb = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
-      footer.style.bottom = kb + 'px';
-      if (kb > 0) document.body.classList.add('kbd-open'); else document.body.classList.remove('kbd-open');
-      chat.scrollTop = chat.scrollHeight;
+    if(!window.visualViewport)return;
+    const vv=window.visualViewport;
+    const setHeights=()=>{
+      if(wrap)wrap.style.height=vv.height+'px';
+      const kb=Math.max(0,(window.innerHeight-vv.height-vv.offsetTop));
+      footer.style.bottom=kb+'px';
+      if(kb>0)document.body.classList.add('kbd-open');else document.body.classList.remove('kbd-open');
+      chat.scrollTop=chat.scrollHeight;
     };
-    vv.addEventListener('resize', setHeights);
-    vv.addEventListener('scroll', setHeights);
-    setHeights();
+    vv.addEventListener('resize',setHeights); vv.addEventListener('scroll',setHeights); setHeights();
   }
   setViewportBindings();
-
-  const input = document.getElementById('prompt');
-  input.addEventListener('focus', () => { setTimeout(() => { window.scrollTo(0,0); chat.scrollTop = chat.scrollHeight; }, 120); });
-  input.addEventListener('blur', () => { document.body.classList.remove('kbd-open'); });
+  const input=document.getElementById('prompt');
+  input.addEventListener('focus',()=>{setTimeout(()=>{window.scrollTo(0,0);chat.scrollTop=chat.scrollHeight;},120)});
+  input.addEventListener('blur',()=>{document.body.classList.remove('kbd-open');});
 })();
 </script>
 
 <script>
-/* ===== Login via server + auto logout + Streaming toggle (persist) ===== */
-const AUTO_LOGOUT_MS = 30 * 60 * 1000;
-let inactivityTimer;
+/* Login + streaming toggle */
+const AUTO_LOGOUT_MS=30*60*1000;let inactivityTimer;
+const accessEl=document.getElementById('accessInput');
+const loginBtn=document.getElementById('loginBtn');
+const loginBox=document.getElementById('login');
+const chatBox=document.getElementById('chatUI');
+const loginMsg=document.getElementById('loginMsg');
+const signoutBtn=document.getElementById('signoutBtn');
 
-const accessEl = document.getElementById('accessInput');
-const loginBtn  = document.getElementById('loginBtn');
-const loginBox  = document.getElementById('login');
-const chatBox   = document.getElementById('chatUI');
-const loginMsg  = document.getElementById('loginMsg');
-const signoutBtn= document.getElementById('signoutBtn');
-
-/* Streaming preference */
 const STREAM_KEY='ppsai_streaming';
 const toggleStreamEl=document.getElementById('toggleStream');
 let useStreaming=false;
-// Default: OFF; giữ trạng thái qua localStorage, chỉ reset khi sign out
 (function initStreamToggle(){
-  const saved = localStorage.getItem(STREAM_KEY);
-  useStreaming = (saved === 'true');
-  if (toggleStreamEl) toggleStreamEl.checked = useStreaming;
-  toggleStreamEl?.addEventListener('change', ()=>{
-    useStreaming = toggleStreamEl.checked;
-    localStorage.setItem(STREAM_KEY, useStreaming ? 'true':'false');
+  const saved=localStorage.getItem(STREAM_KEY);
+  useStreaming=(saved==='true'); // mặc định tắt
+  if(toggleStreamEl) toggleStreamEl.checked=useStreaming;
+  toggleStreamEl?.addEventListener('change',()=>{
+    useStreaming=toggleStreamEl.checked;
+    localStorage.setItem(STREAM_KEY,useStreaming?'true':'false');
   });
 })();
 
-function resetInactivityTimer(){
-  clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(()=>{ alert("Session timed out."); signOut(); }, AUTO_LOGOUT_MS);
-}
-function initInactivityListeners(){
-  ["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{
-    document.addEventListener(ev, resetInactivityTimer, {passive:true});
-  });
-  resetInactivityTimer();
-}
-
+function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
+function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
 async function checkAccess(){
-  const val = accessEl.value.trim();
-  if (!val) { loginMsg.textContent='Please enter the Access code'; loginMsg.style.display='block'; return; }
-
-  loginBtn.disabled = true;
-  const oldLabel = loginBtn.textContent;
-  loginBtn.textContent = 'Verifying...';
-  loginMsg.style.display='none';
-
+  const val=accessEl.value.trim();if(!val){loginMsg.textContent='Please enter the Access code';loginMsg.style.display='block';return;}
+  loginBtn.disabled=true;const oldLabel=loginBtn.textContent;loginBtn.textContent='Verifying...';loginMsg.style.display='none';
   try{
-    const res = await fetch("/api/login",{
-      method:"POST",
-      headers:{ "content-type":"application/json" },
-      body:JSON.stringify({ code: val })
-    });
-    if(res.ok){
-      loginBox.classList.add('hidden');
-      chatBox.classList.remove('hidden');
-      initInactivityListeners();
-      accessEl.value='';
-    }else{
-      let reason='Invalid Access Code';
-      try{ const j=await res.json(); if (j?.error) reason=j.error; }catch{}
-      loginMsg.textContent = reason;
-      loginMsg.style.display = 'block';
-    }
-  }catch(e){
-    loginMsg.textContent = 'Unable to connect. Please try again later.';
-    loginMsg.style.display = 'block';
-  }finally{
-    loginBtn.disabled = false;
-    loginBtn.textContent = oldLabel;
-  }
+    const res=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:val})});
+    if(res.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();accessEl.value='';}
+    else{let reason='Invalid Access Code';try{const j=await res.json();if(j?.error)reason=j.error;}catch{}loginMsg.textContent=reason;loginMsg.style.display='block';}
+  }catch(e){loginMsg.textContent='Unable to connect. Please try again later.';loginMsg.style.display='block';}
+  finally{loginBtn.disabled=false;loginBtn.textContent=oldLabel;}
 }
-
-loginBtn.addEventListener('click', checkAccess);
-accessEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); checkAccess(); } });
-
+loginBtn.addEventListener('click',checkAccess);
+accessEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkAccess();}});
 async function signOut(){
-  try{ await fetch("/api/logout",{ method:"POST" }); }catch{}
-  chatBox.classList.add('hidden');
-  loginBox.classList.remove('hidden');
-  clearTimeout(inactivityTimer);
-  localStorage.removeItem('ppsai_session_id');
-  localStorage.removeItem('ppsai_messages');
-
-  // Reset streaming về OFF khi sign out
-  localStorage.removeItem(STREAM_KEY);
-  useStreaming=false;
-  if (toggleStreamEl) toggleStreamEl.checked=false;
-
-  const chatEl = document.getElementById('chat');
-  if (chatEl) chatEl.innerHTML='';
+  try{await fetch("/api/logout",{method:"POST"});}catch{}
+  chatBox.classList.add('hidden');loginBox.classList.remove('hidden');clearTimeout(inactivityTimer);
+  localStorage.removeItem('ppsai_session_id');localStorage.removeItem('ppsai_messages');localStorage.removeItem(STREAM_KEY);
+  useStreaming=false;if(toggleStreamEl)toggleStreamEl.checked=false;
+  const chatEl=document.getElementById('chat');if(chatEl)chatEl.innerHTML='';
 }
-signoutBtn.addEventListener('click', signOut);
-
-// Tự mở chat nếu có phiên
-(async () => {
-  const r = await fetch("/api/session").catch(()=>null);
-  if (r && r.ok) {
-    loginBox.classList.add('hidden');
-    chatBox.classList.remove('hidden');
-    initInactivityListeners();
-  }
-})();
+signoutBtn.addEventListener('click',signOut);
+(async()=>{const r=await fetch("/api/session").catch(()=>null);if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}})();
 </script>
 
 <script>
-/* ===== Chat logic (proxy qua /api/chat) + Streaming SSE/NDJSON ===== */
+/* Chat logic */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -343,28 +273,27 @@ if(!sessionId){
 
 /* Lịch sử có TTL & giới hạn */
 const MSGS_KEY='ppsai_messages';
-const HISTORY_TTL_DAYS=30, HISTORY_MAX_ITEMS=200, HISTORY_MAX_BYTES=800_000;
-
-function loadMessages(){ try{return JSON.parse(localStorage.getItem(MSGS_KEY)||'[]');}catch{return[]} }
+const HISTORY_TTL_DAYS=30,HISTORY_MAX_ITEMS=200,HISTORY_MAX_BYTES=800000;
+function loadMessages(){try{return JSON.parse(localStorage.getItem(MSGS_KEY)||'[]');}catch{return[]}}
 function saveMessages(arr){
-  const now=Date.now(), ttlMs=HISTORY_TTL_DAYS*24*60*60*1000;
+  const now=Date.now(),ttlMs=HISTORY_TTL_DAYS*24*60*60*1000;
   let pruned=arr.filter(m=>!m.ts||(now-m.ts)<=ttlMs);
-  if(pruned.length>HISTORY_MAX_ITEMS) pruned=pruned.slice(pruned.length-HISTORY_MAX_ITEMS);
+  if(pruned.length>HISTORY_MAX_ITEMS)pruned=pruned.slice(pruned.length-HISTORY_MAX_ITEMS);
   let json=JSON.stringify(pruned);
-  while(json.length>HISTORY_MAX_BYTES&&pruned.length>1){ pruned.shift(); json=JSON.stringify(pruned); }
+  while(json.length>HISTORY_MAX_BYTES&&pruned.length>1){pruned.shift();json=JSON.stringify(pruned);}
   localStorage.setItem(MSGS_KEY,json);
 }
-let messages=loadMessages(); renderHistory(messages);
+let messages=loadMessages();renderHistory(messages);
 
 btnEl.addEventListener('click',onSend);
 /* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
 inputEl.addEventListener('keydown',e=>{
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();onSend();}
 });
 function autosizeTextarea(el){
   el.style.height='auto';
   const max=Math.round(window.innerHeight*0.40);
-  const h=Math.min(el.scrollHeight, max);
+  const h=Math.min(el.scrollHeight,max);
   el.style.height=h+'px';
   el.style.overflowY=(el.scrollHeight>max)?'auto':'hidden';
 }
@@ -373,18 +302,18 @@ window.addEventListener('resize',()=>autosizeTextarea(inputEl));
 autosizeTextarea(inputEl);
 
 /* Mở link trong tab mới */
-chatEl.addEventListener('click',(e)=>{
+chatEl.addEventListener('click',e=>{
   const a=e.target.closest('a'); if(!a) return;
-  const href=a.getAttribute('href'); if(!href || href.startsWith('#')) return;
+  const href=a.getAttribute('href'); if(!href||href.startsWith('#')) return;
   e.preventDefault(); a.setAttribute('rel','noopener'); a.setAttribute('target','_blank');
   try{ window.open(a.href,'_blank','noopener,noreferrer'); }catch{ a.click(); }
 });
 
 /* Markdown render */
-marked.setOptions({ gfm:true, breaks:true, headerIds:false, mangle:false });
+marked.setOptions({gfm:true,breaks:true,headerIds:false,mangle:false});
 function renderMarkdown(md){
-  let html = marked.parse(md || '');
-  html = html.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+  let html=marked.parse(md||'');
+  html=html.replace(/<a /g,'<a target="_blank" rel="noopener" ');
   return DOMPurify.sanitize(html);
 }
 
@@ -401,7 +330,7 @@ function appendBubble(text,role='assistant',imageUrl=null){
 
   const content=document.createElement('div');
   content.className='content';
-  content.innerHTML = renderMarkdown(text || '');
+  content.innerHTML=renderMarkdown(text||'');
   d.appendChild(content);
   chatEl.appendChild(d);
 
@@ -417,114 +346,66 @@ function appendBubble(text,role='assistant',imageUrl=null){
   chatEl.scrollTop=chatEl.scrollHeight;
   return d;
 }
-
 function renderHistory(arr){
   chatEl.innerHTML='';
-  const sorted = [...arr].sort((a,b)=>(a.ts||0)-(b.ts||0));
-  sorted.forEach(m=>appendBubble(m.content, m.role, m.image_url));
+  const sorted=[...arr].sort((a,b)=>(a.ts||0)-(b.ts||0));
+  sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* === STREAMING: đọc SSE/NDJSON JSON-per-line từ N8N ===
-   Hỗ trợ:
-   - SSE: "data: {json}\n\n" hoặc "data: [DONE]"
-   - NDJSON: {json}\n mỗi dòng
-   - Raw text chunk: cộng dồn trực tiếp
-*/
-async function streamFromWebhook(sessionId, message, targetNode){
+/* STREAMING: SSE/NDJSON */
+async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
-    'Accept':'text/event-stream, application/x-ndjson, application/json'
+    'Accept':'text/event-stream, application/x-ndjson, text/plain, application/json'
   };
-  const body = JSON.stringify({ sessionId, chatInput: message });
-
-  // Thử /api/chat?stream=1 trước, sau đó /api/chat/stream
-  const attempts = [
-    { url: '/api/chat?stream=1', method: 'POST' },
-    { url: '/api/chat/stream',   method: 'POST' },
+  const body=JSON.stringify({sessionId,chatInput:message});
+  const attempts=[
+    {url:'/api/chat?stream=1',method:'POST'},
+    {url:'/api/chat/stream',method:'POST'},
   ];
-
   let res=null;
   for(const a of attempts){
-    try{
-      const r = await fetch(a.url, { method:a.method, headers, body });
-      if(r.ok){ res=r; break; }
-    }catch{}
+    try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
   }
-
-  // Fallback non-stream nếu không OK hoặc không có body stream
-  if(!res || !res.body){
-    const {content,image_url} = await sendToWebhook(sessionId, message);
-    targetNode.querySelector('.content').innerHTML = renderMarkdown(content||'(không có nội dung)');
-    if (image_url){
-      const w=document.createElement('div');
-      w.className='content';
-      w.innerHTML=`<a href="${encodeURI(image_url)}" target="_blank" rel="noopener">
-        <img src="${encodeURI(image_url)}" alt="Image from AI">
-      </a>`;
+  if(!res||!res.body){
+    const {content,image_url}=await sendToWebhook(sessionId,message);
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
+    if(image_url){
+      const w=document.createElement('div');w.className='content';
+      w.innerHTML=`<a href="${encodeURI(image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(image_url)}" alt="Image from AI"></a>`;
       chatEl.appendChild(w);
     }
     return content||'';
   }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let acc = '';
-
+  const reader=res.body.getReader();const decoder=new TextDecoder();let buffer='';let acc='';
   while(true){
-    const { done, value } = await reader.read();
-    if(done) break;
-    buffer += decoder.decode(value, { stream:true });
-
-    // Cắt theo dòng (SSE/NDJSON đều kết thúc bằng \n)
-    const lines = buffer.split(/\r?\n/);
-    buffer = lines.pop(); // giữ phần dở
-
+    const {done,value}=await reader.read(); if(done) break;
+    buffer+=decoder.decode(value,{stream:true});
+    const lines=buffer.split(/\r?\n/); buffer=lines.pop();
     for(let raw of lines){
-      let line = raw.trim();
-      if(!line) continue;
-
-      // SSE: bắt đầu bằng "data:"
-      if(line.startsWith('data:')) line = line.slice(5).trim();
-      if(line === '[DONE]') { buffer=''; break; }
-
-      // Thử parse JSON-per-line { "type":"item","content":"..." }
-      let parsed = null;
-      if(line.startsWith('{') || line.startsWith('[')){
-        try{ parsed = JSON.parse(line); }catch(_){}
-      }
-
-      if(parsed && typeof parsed === 'object'){
-        // Chuẩn N8N: {"type":"item","content":"…"} hoặc {"type":"begin"/"end"}
-        if(parsed.type === 'item' && typeof parsed.content === 'string'){
-          acc += parsed.content;
-        } else if (parsed.type === 'end') {
-          buffer='';
-          break;
-        } else if (typeof parsed.delta === 'string') {
-          // Trường hợp mô hình đẩy delta
-          acc += parsed.delta;
-        } else if (typeof parsed.content === 'string') {
-          // Trường hợp generic
-          acc += parsed.content;
-        }
-      } else {
-        // Raw text chunk (nếu webhook trả text thuần)
-        acc += line;
+      let line=raw.trim(); if(!line) continue;
+      if(line.startsWith('data:')) line=line.slice(5).trim();
+      if(line==='[DONE]'){buffer='';break;}
+      let parsed=null;
+      if(line.startsWith('{')||line.startsWith('[')){try{parsed=JSON.parse(line);}catch{}}
+      if(parsed&&typeof parsed==='object'){
+        if(parsed.type==='item'&&typeof parsed.content==='string'){acc+=parsed.content;}
+        else if(parsed.type==='end'){buffer='';break;}
+        else if(typeof parsed.delta==='string'){acc+=parsed.delta;}
+        else if(typeof parsed.content==='string'){acc+=parsed.content;}
+      }else{
+        acc+=line;
       }
     }
-
-    // update UI mỗi lượt
-    targetNode.querySelector('.content').innerHTML = renderMarkdown(acc);
-    chatEl.scrollTop = chatEl.scrollHeight;
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+    chatEl.scrollTop=chatEl.scrollHeight;
   }
-
   return acc;
 }
 
 function typing(show){
   let t=document.getElementById('typing');
-  if(show && !t){
+  if(show&&!t){
     t=document.createElement('div'); t.id='typing'; t.className='msg assistant typing';
     const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
     av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
@@ -532,79 +413,115 @@ function typing(show){
     const span=document.createElement('div'); span.className='content'; span.textContent='Thinking...';
     t.appendChild(span);
     chatEl.appendChild(t); chatEl.scrollTop=chatEl.scrollHeight;
-  } else if(!show && t){ t.remove(); }
+  } else if(!show&&t){ t.remove(); }
 }
 
 function onSend(){
   const text=inputEl.value.trim(); if(!text) return;
-  // user bubble + lưu lịch sử
   appendBubble(text,'user');
-  messages.push({ role:'user', content:text, ts: Date.now() }); saveMessages(messages);
+  messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
 
   inputEl.value=''; autosizeTextarea(inputEl);
 
-  if (useStreaming){
-    // streaming path (không dùng typing bubble)
-    const node = appendBubble('', 'assistant'); // placeholder để stream vào
-    streamFromWebhook(sessionId, text, node).then(finalText=>{
-      messages.push({ role:'assistant', content: finalText||'', image_url:null, ts: Date.now() });
+  if(useStreaming){
+    const node=appendBubble('','assistant');
+    streamFromWebhook(sessionId,text,node).then(finalText=>{
+      messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
       saveMessages(messages);
     }).catch(err=>{
       const msg=`Error (stream): ${err}`;
-      node.querySelector('.content').innerHTML = renderMarkdown(msg);
-      messages.push({ role:'assistant', content:msg, image_url:null, ts: Date.now() });
+      node.querySelector('.content').innerHTML=renderMarkdown(msg);
+      messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
       saveMessages(messages);
     });
-  } else {
-    // Non-stream như cũ
+  }else{
     typing(true);
     sendToWebhook(sessionId,text).then(({content,image_url})=>{
       typing(false);
       appendBubble(content||'(không có nội dung)','assistant',image_url);
-      messages.push({ role:'assistant', content:content||'', image_url:image_url||null, ts: Date.now() });
+      messages.push({role:'assistant',content:content||'',image_url:image_url||null,ts:Date.now()});
       saveMessages(messages);
     }).catch(err=>{
       typing(false);
       const msg=`Error: Failed to connect - ${err}`;
       appendBubble(msg,'assistant');
-      messages.push({ role:'assistant', content:msg, image_url:null, ts: Date.now() });
+      messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
       saveMessages(messages);
     });
   }
 }
 
-async function sendToWebhook(sessionId, message){
-  const headers={'Content-Type':'application/json'};
-  const res=await fetch("/api/chat",{
-    method:'POST', headers, body:JSON.stringify({ sessionId, chatInput: message })
-  });
-  if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error(`${res.status} ${t.slice(0,200)}`); }
-  const data=await res.json();
-  let content=null, image_url=null;
-  if(Array.isArray(data)){ const f=data[0]||{}; content=f.content||f.output; image_url=f.url; }
-  else { content=data.content||data.output; image_url=data.url; }
-  return { content, image_url };
+/* NON-STREAM: chịu được JSON hoặc NDJSON/text trả về từ N8N */
+async function sendToWebhook(sessionId,message){
+  const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson'};
+  const res=await fetch("/api/chat",{method:'POST',headers,body:JSON.stringify({sessionId,chatInput:message})});
+  const statusErr = async () => {
+    const t=await res.text().catch(()=> '');
+    throw new Error(`${res.status} ${t.slice(0,200)}`);
+  };
+  if(!res.ok) return statusErr();
+
+  const ct=(res.headers.get('content-type')||'').toLowerCase();
+
+  // Trường hợp JSON chuẩn
+  if(ct.includes('application/json')){
+    try{
+      const data=await res.json();
+      let content=null,image_url=null;
+      if(Array.isArray(data)){const f=data[0]||{};content=f.content||f.output;image_url=f.url;}
+      else{content=data.content||data.output;image_url=data.url;}
+      return {content,image_url};
+    }catch(e){
+      // nếu JSON không chuẩn, rơi xuống parse text
+    }
+  }
+
+  // Trường hợp NDJSON / text / SSE được trả về như text
+  const text=await res.text();
+  // Cố gắng parse từng dòng JSON
+  const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  let acc='', image_url=null;
+  for(const raw of lines){
+    let line=raw;
+    if(line.startsWith('data:')) line=line.slice(5).trim(); // nếu là SSE đã strip "data:"
+    if(!line) continue;
+
+    // JSON từng dòng
+    if(line.startsWith('{')||line.startsWith('[')){
+      try{
+        const obj=JSON.parse(line);
+        if(obj){
+          if(typeof obj.content==='string') acc+=obj.content;
+          if(typeof obj.delta==='string') acc+=obj.delta;
+          if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
+          if(obj.url && !image_url) image_url=obj.url;
+        }
+        continue;
+      }catch{}
+    }
+    // Không parse được JSON → coi là text thuần
+    acc += (acc && !acc.endsWith(' ') ? ' ' : '') + line;
+  }
+
+  // Nếu vẫn trống, trả về nguyên văn body
+  if(!acc) acc = text;
+
+  return {content:acc, image_url};
 }
 
-/* === Nút mũi tên: hiện khi chưa ở đáy, ẩn khi chạm đáy === */
 (function(){
-  const chatBox = document.getElementById('chat');
-  const scrollBtn = document.getElementById('scrollBtn');
-
+  const chatBox=document.getElementById('chat');
+  const scrollBtn=document.getElementById('scrollBtn');
   function toggleBtn(){
-    const threshold = 200;
+    const threshold=200;
     if (chatBox.scrollHeight - chatBox.scrollTop > chatBox.clientHeight + threshold) {
       scrollBtn.classList.add('show');
     } else {
       scrollBtn.classList.remove('show');
     }
   }
-
-  chatBox.addEventListener('scroll', toggleBtn);
-  scrollBtn.addEventListener('click', () => {
-    chatBox.scrollTop = chatBox.scrollHeight;
-  });
-
+  chatBox.addEventListener('scroll',toggleBtn);
+  scrollBtn.addEventListener('click',()=>{chatBox.scrollTop=chatBox.scrollHeight;});
   toggleBtn();
 })();
 </script>
