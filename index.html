@@ -13,7 +13,7 @@
 
   <style>
     :root{
-      --bg:#f3f4f6; --brand:#003366; --brand-2:#0055aa; --text:#0f172a; --muted:#64748b;
+      --bg:#f3f4f6; --brand:#003366; --brand-2:#0055aa; --text:#0f172a; --muted:#6b7280;
       --bubble-user:#f1f5f9; --bubble-bot:#fff; --bubble-border:#e2e8f0;
       --radius:12px; --footer-h:64px;
       --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -104,7 +104,7 @@
     .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
           word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
           display:flex; align-items:flex-start; gap:10px; }
-    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); position:relative; } /* UPDATED: position để gắn chip */
+    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); position:relative; } /* UPDATED: để gắn status text */
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
     .content a{ color:#0ea5e9; text-decoration:underline }
@@ -114,14 +114,13 @@
     .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
-    /* UPDATED: Chip trạng thái trên đầu icon AI */
+    /* UPDATED: Trạng thái mờ như ChatGPT (không nền đen) */
     .status-chip{
       position:absolute;
-      left:8px;            /* canh thẳng icon AI (avatar) */
-      top:-10px;           /* nằm trên đầu icon */
-      background:#111; color:#fff;
-      border-radius:999px; font-size:12px; padding:2px 8px; line-height:20px;
-      border:1px solid #000; box-shadow:0 1px 2px rgba(0,0,0,.12);
+      left:8px;             /* nằm ngay trên avatar */
+      top:-12px;
+      font-size:12px;
+      color:var(--muted);   /* chữ mờ */
       user-select:none; pointer-events:none;
     }
 
@@ -133,10 +132,10 @@
       border-top:1px solid var(--bubble-border); background:#fff;
       padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));
     }
-    .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative; } /* UPDATED: để đặt nút gửi trong ô nhập */
+    .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative; } /* UPDATED: để gắn nút gửi trong ô nhập */
 
     #prompt{
-      flex:1; padding:12px 52px 12px 12px; /* UPDATED: chừa chỗ bên phải cho nút gửi */
+      flex:1; padding:12px 56px 12px 12px; /* UPDATED: chừa chỗ rộng hơn cho nút 40px */
       border:1px solid var(--bubble-border); border-radius:12px;
       outline:none; font-size:16px;
       resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
@@ -166,15 +165,15 @@
       header img{ height:36px }
     }
 
-    /* UPDATED: Nút gửi giống ChatGPT (tròn đen, mũi tên trắng hướng lên) */
+    /* UPDATED: Nút gửi như ChatGPT (40px, mũi tên trắng to) */
     .inbox-send{
-      position:absolute; right:12px; bottom:10px; width:36px; height:36px;
+      position:absolute; right:10px; bottom:10px; width:40px; height:40px;
       border-radius:999px; background:#111; color:#fff; border:none; display:none;
       align-items:center; justify-content:center; cursor:pointer;
       box-shadow:0 2px 8px rgba(0,0,0,.12);
       transition:transform .12s ease, opacity .12s ease;
     }
-    .inbox-send svg{ width:18px; height:18px; display:block; }
+    .inbox-send svg{ width:20px; height:20px; display:block; }
     .inbox-send:hover{ transform:scale(1.05); }
     .inbox-send:active{ transform:scale(0.98); }
     .inbox-send.show{ display:inline-flex; }
@@ -228,12 +227,12 @@
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <!-- UPDATED: Nút gửi giống ChatGPT (mũi tên trắng hướng lên) -->
+      <!-- UPDATED: Nút gửi như ChatGPT -->
       <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
         <!-- mũi tên trắng hướng lên -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 19V6"></path>
-          <path d="M5 12l7-7 7 7"></path>
+          <path d="M5 13l7-7 7 7"></path>
         </svg>
       </button>
       <button id="sendBtn">Send</button> <!-- vẫn giữ nguyên phần gốc, đã ẩn bằng CSS -->
@@ -326,7 +325,7 @@ kebabSignOut?.addEventListener('click', ()=>{
 </script>
 
 <script>
-/* Chat logic (mặc định STREAMING, có fallback non-stream) */
+/* Chat logic (mặc định STREAMING, có xử lý non-stream trả một lần) */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -352,7 +351,7 @@ function saveMessages(arr){
 }
 let messages=loadMessages();renderHistory(messages);
 
-/* UPDATED: Nút gửi mới trong ô nhập (hiện khi có nội dung) */
+/* UPDATED: Nút gửi trong ô nhập (show khi có text) */
 const inboxSend=document.getElementById('inboxSend');
 function toggleInboxSend(){
   const hasText=!!inputEl.value.trim();
@@ -362,7 +361,7 @@ function toggleInboxSend(){
 inputEl.addEventListener('input', toggleInboxSend);
 toggleInboxSend();
 
-btnEl.addEventListener('click',onSend);   // Giữ nguyên binding cũ (dù đã ẩn)
+btnEl.addEventListener('click',onSend);    // giữ binding cũ (đã ẩn)
 inboxSend.addEventListener('click',onSend); // UPDATED: gửi bằng nút tròn trong ô nhập
 
 /* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
@@ -396,7 +395,7 @@ function renderMarkdown(md){
   return DOMPurify.sanitize(html);
 }
 
-/* appendBubble trả về node để stream có thể cập nhật trực tiếp */
+/* appendBubble trả về node để stream/non-stream có thể cập nhật trực tiếp */
 function appendBubble(text,role='assistant',imageUrl=null){
   const d=document.createElement('div');
   d.className='msg '+(role==='user'?'user':'assistant');
@@ -431,7 +430,7 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* UPDATED: chip trạng thái gắn trực tiếp vào mỗi assistant bubble */
+/* UPDATED: Status text mờ gắn vào đúng bubble assistant (duy nhất 1 icon) */
 function setStatusChip(node, text){
   if(!node) return;
   let chip = node.querySelector('.status-chip');
@@ -441,14 +440,10 @@ function setStatusChip(node, text){
     node.appendChild(chip);
   }
   chip.textContent = text || '';
-}
-function clearStatusChip(node){
-  if(!node) return;
-  const chip = node.querySelector('.status-chip');
-  if(chip) chip.remove();
+  if(!text) chip.remove();
 }
 
-/* STREAMING: SSE/NDJSON (có flush buffer để hỗ trợ non-stream JSON) */
+/* STREAMING / NON-STREAM tự nhận biết theo content-type */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -463,7 +458,8 @@ async function streamFromWebhook(sessionId,message,targetNode){
   for(const a of attempts){
     try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
   }
-  if(!res||!res.body){
+  if(!res){
+    // fallback qua non-stream endpoint
     const {content,image_url}=await sendToWebhook(sessionId,message);
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     if(image_url){
@@ -473,19 +469,46 @@ async function streamFromWebhook(sessionId,message,targetNode){
     }
     return content||'';
   }
-  const reader=res.body.getReader();const decoder=new TextDecoder();let buffer='';let acc='';
+
+  const ct=(res.headers.get('content-type')||'').toLowerCase();
+
+  /* UPDATED: Nếu KHÔNG phải stream → xử lý như non-stream một lần */
+  if(!/event-stream|ndjson/.test(ct)){
+    const text=await res.text();
+    let content='', image_url=null;
+    // cố gắng parse JSON
+    try{
+      const data = JSON.parse(text);
+      if(Array.isArray(data)){ const f=data[0]||{}; content=f.content||f.output||''; image_url=f.url||null; }
+      else { content=data.content||data.output||text; image_url=data.url||null; }
+    }catch{
+      // không phải JSON → dùng raw text
+      content = text;
+    }
+    // cập nhật Thought khi có nội dung
+    if(content && !targetNode.querySelector('.content').innerHTML.trim()){
+      setStatusChip(targetNode,'Thought'); /* UPDATED */
+    }
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
+    chatEl.scrollTop=chatEl.scrollHeight;
+    return content||'';
+  }
+
+  /* STREAM thực sự (SSE/NDJSON) */
+  const reader=res.body.getReader();const decoder=new TextDecoder();
+  let buffer='';let acc=''; let started=false;
+
   while(true){
     const {done,value}=await reader.read();
     buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});
 
-    // parse theo dòng (SSE/NDJSON) — giữ lại dư vào buffer
-    let index, start = 0;
-    while((index = buffer.indexOf('\n', start)) >= 0){
-      const raw = buffer.slice(start, index).trim();
-      start = index + 1;
-      if(!raw){ continue; }
-      let line = raw;
-      if(line.startsWith('data:')) line = line.slice(5).trim();
+    // parse dòng
+    let idx,start=0;
+    while((idx=buffer.indexOf('\n',start))>=0){
+      const raw=buffer.slice(start,idx).trim(); start=idx+1;
+      if(!raw) continue;
+      let line=raw;
+      if(line.startsWith('data:')) line=line.slice(5).trim();
 
       let parsed=null;
       if(line.startsWith('{')||line.startsWith('[')){ try{ parsed=JSON.parse(line); }catch{} }
@@ -498,100 +521,36 @@ async function streamFromWebhook(sessionId,message,targetNode){
         if(line!=='[DONE]') acc += (acc && !acc.endsWith(' ') ? ' ' : '') + line;
       }
     }
-    buffer = buffer.slice(start); // phần dư chưa có newline
+    buffer = buffer.slice(start);
 
-    // cập nhật UI khi có dữ liệu
     if(acc){
+      if(!started){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED: chuyển từ Thinking→Thought khi có data */
       targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
       chatEl.scrollTop=chatEl.scrollHeight;
-      setStatusChip(targetNode,'Thought'); /* UPDATED: hiển thị Thought trong lúc trả lời */
     }
 
     if(done) break;
   }
 
-  // UPDATED: FLUSH phần buffer cuối (hỗ trợ non-stream JSON không có dấu xuống dòng)
-  const tail = buffer.trim();
+  // flush phần dư cuối (phòng non-ndjson kết thúc không newline)
+  const tail=buffer.trim();
   if(tail){
     try{
-      const obj = JSON.parse(tail);
+      const obj=JSON.parse(tail);
       if(obj){
         if(typeof obj.content==='string') acc+=obj.content;
         if(typeof obj.delta==='string') acc+=obj.delta;
         if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
-        if(typeof obj === 'string') acc+=obj; // phòng xa
+        if(typeof obj==='string') acc+=obj;
       }
     }catch{
       if(tail!=='[DONE]') acc += (acc && !acc.endsWith(' ') ? ' ' : '') + tail;
     }
+    if(!started && acc){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED */
     targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
   }
 
   return acc;
-}
-
-/* UPDATED: Trạng thái Thinking... / Thought theo đúng vị trí */
-function typing(show){
-  let t=document.getElementById('typing');
-  if(show&&!t){
-    t=document.createElement('div'); t.id='typing'; t.className='msg assistant typing';
-    const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
-    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
-    t.appendChild(av);
-    const span=document.createElement('div'); span.className='content'; span.textContent=''; /* không hiển thị nội dung khi nghĩ */
-    t.appendChild(span);
-    chatEl.appendChild(t); chatEl.scrollTop=chatEl.scrollHeight;
-
-    /* chip "Thinking..." nằm trên đầu icon AI */
-    setStatusChip(t,'Thinking...');
-  } else if(!show&&t){
-    clearStatusChip(t);
-    t.remove();
-  }
-}
-
-/* Gửi tin (stream ưu tiên; nếu stream lỗi → non-stream) */
-async function onSend(){
-  const text=inputEl.value.trim(); if(!text) return;
-
-  appendBubble(text,'user');
-  messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
-
-  inputEl.value=''; autosizeTextarea(inputEl);
-  toggleInboxSend(); /* UPDATED: cập nhật hiển thị nút gửi */
-
-  /* UPDATED: hiện Thinking... tách biệt, có chip trên đầu icon */
-  typing(true);
-
-  const node=appendBubble('', 'assistant'); // placeholder để stream/nhận kết quả
-  try{
-    const finalText=await streamFromWebhook(sessionId,text,node);
-    messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
-    saveMessages(messages);
-  }catch(err){
-    // Fallback cuối: gọi non-stream trực tiếp
-    try{
-      const {content,image_url}=await sendToWebhook(sessionId,text);
-      node.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
-      if(image_url){
-        const w=document.createElement('div');w.className='content';
-        w.innerHTML=`<a href="${encodeURI(image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(image_url)}" alt="Image from AI"></a>`;
-        chatEl.appendChild(w);
-      }
-      messages.push({role:'assistant',content:content||'',image_url:null,ts:Date.now()});
-      saveMessages(messages);
-    }catch(e2){
-      const msg=`Error: ${e2?.message||e2}`;
-      node.querySelector('.content').innerHTML=renderMarkdown(msg);
-      messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
-      saveMessages(messages);
-    }
-  }finally{
-    typing(false);                 /* tắt Thinking... */
-    clearStatusChip(node);         /* đảm bảo không còn chip cũ */
-    setStatusChip(node,'Thought'); /* Thought hiển thị đến khi xong */
-    setTimeout(()=>clearStatusChip(node), 1000); /* giữ nhã 1s rồi ẩn (giống ChatGPT) */
-  }
 }
 
 /* NON-STREAM fallback: chịu JSON/NDJSON/text trả về */
@@ -640,6 +599,50 @@ async function sendToWebhook(sessionId,message){
   }
   if(!acc) acc = text;
   return {content:acc, image_url};
+}
+
+/* Gửi tin: 1 bubble assistant duy nhất cho cả Thinking→Thought→Done */
+async function onSend(){
+  const text=inputEl.value.trim(); if(!text) return;
+
+  appendBubble(text,'user');
+  messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
+
+  inputEl.value=''; autosizeTextarea(inputEl);
+  toggleInboxSend();
+
+  const node=appendBubble('', 'assistant');          /* tạo 1 bubble duy nhất */
+  setStatusChip(node,'Thinking...');                 /* UPDATED: hiển thị Thinking... trên đầu avatar */
+
+  try{
+    const finalText=await streamFromWebhook(sessionId,text,node);
+    messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
+    saveMessages(messages);
+  }catch(err){
+    // fallback cuối: gọi non-stream trực tiếp
+    try{
+      const {content,image_url}=await sendToWebhook(sessionId,text);
+      if(content && !node.querySelector('.content').innerHTML.trim()){
+        setStatusChip(node,'Thought'); /* nếu chưa có data, fake chuyển Thought */
+      }
+      node.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
+      if(image_url){
+        const w=document.createElement('div');w.className='content';
+        w.innerHTML=`<a href="${encodeURI(image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(image_url)}" alt="Image from AI"></a>`;
+        chatEl.appendChild(w);
+      }
+      messages.push({role:'assistant',content:content||'',image_url:null,ts:Date.now()});
+      saveMessages(messages);
+    }catch(e2){
+      const msg=`Error: ${e2?.message||e2}`;
+      node.querySelector('.content').innerHTML=renderMarkdown(msg);
+      messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
+      saveMessages(messages);
+    }
+  }finally{
+    // Ẩn status sau khi hoàn tất một nhịp (giống ChatGPT)
+    setTimeout(()=>setStatusChip(node,''), 800); /* UPDATED: ẩn chip */
+  }
 }
 
 (function(){
