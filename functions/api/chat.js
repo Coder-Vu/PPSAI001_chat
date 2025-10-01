@@ -69,9 +69,9 @@ export async function onRequestPost({ request, env }) {
   const hVal  = envPick(env, ["N8N_HEADER_VALUE", "N8n_header_value", "n8n_header_value"]);
   if (hName && hVal) headers.set(hName, hVal);
 
-  // Forward Accept để n8n quyết định SSE/NDJSON chính xác
+  // Forward Accept để n8n quyết định SSE/NDJSON/JSON chính xác
   const accept = request.headers.get("accept");
-  if (accept) headers.set("accept", accept);
+  if (accept) headers.set("accept", accept); // UPDATED: áp dụng cho cả stream & non-stream
 
   // ---------- STREAMING PASSTHROUGH ----------
   if (isStream) {
@@ -88,7 +88,8 @@ export async function onRequestPost({ request, env }) {
     } catch (err) {
       return new Response(
         JSON.stringify({ ok: false, error: "upstream fetch error", detail: String(err) }),
-        { status: 502, headers: { "content-type": "application/json" } }
+        { status: 502, headers: { "content-type": "application/json",
+                                   "access-control-allow-origin": "*" } }
       );
     }
 
@@ -125,7 +126,8 @@ export async function onRequestPost({ request, env }) {
   } catch (err) {
     return new Response(
       JSON.stringify({ ok: false, error: "upstream fetch error", detail: String(err) }),
-      { status: 502, headers: { "content-type": "application/json" } }
+      { status: 502, headers: { "content-type": "application/json",
+                                 "access-control-allow-origin": "*" } }
     );
   }
 
