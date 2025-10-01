@@ -32,12 +32,11 @@ export async function onRequestPost({ request, env }) {
   const hVal = envPick(env, ["N8N_HEADER_VALUE", "N8n_header_value"]);
   if (hName && hVal) headers.set(hName, hVal);
 
-  // Kiểm tra nếu là endpoint /api/chat/stream thì xử lý streaming SSE
+  // Kiểm tra nếu là endpoint /api/chat/stream thì passthrough stream JSON
   const urlPath = new URL(request.url).pathname;
   const isStream = urlPath.endsWith("/stream");
 
   if (isStream) {
-    // Forward stream sang N8N (SSE passthrough)
     const bodyText = await request.text();
     headers.set("content-type", "application/json");
 
@@ -47,21 +46,20 @@ export async function onRequestPost({ request, env }) {
       body: bodyText,
     });
 
-    // Trả stream về client (không buffer)
     const refreshCookie = setAuthCookie("1", 30 * 60);
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
         "content-type":
-          upstream.headers.get("content-type") || "text/event-stream",
+          upstream.headers.get("content-type") || "application/json",
         "cache-control": "no-cache",
-        connection: "keep-alive",
+        "connection": "keep-alive",
         "Set-Cookie": refreshCookie,
       },
     });
   }
 
-  // Non-stream (mặc định JSON)
+  // Non-stream (mặc định JSON, full response)
   let upstream;
   if (method === "POST") {
     const bodyText = await request.text();
