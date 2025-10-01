@@ -27,7 +27,6 @@
       display:flex; justify-content:center; align-items:stretch;
       min-height:100svh; overflow-x:hidden;
     }
-    input, textarea, button { font-family: var(--ui-font); }
     .hidden{display:none!important}
 
     /* Login */
@@ -64,13 +63,19 @@
     header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
     header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
 
-    /* Chỉ còn nút Sign out (bỏ toggle) */
-    header .controls{ display:flex; gap:10px; align-items:center }
-
-    header button.signout{
-      padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
+    /* [UPDATED] Menu 3 chấm thay cho nút Sign out trực tiếp */
+    .menu{ position:relative; }
+    .menu-btn{ background:none; border:none; font-size:22px; cursor:pointer; padding:6px 8px; line-height:1; }
+    .menu-content{
+      display:none; position:absolute; right:0; top:120%;
+      background:#fff; border:1px solid var(--bubble-border); border-radius:8px;
+      box-shadow:0 6px 16px rgba(0,0,0,.12); min-width:140px; z-index:10;
     }
-    header button.signout:hover{background:var(--brand-2); border-color:var(--brand-2)}
+    .menu.open .menu-content{ display:block; }
+    .menu-content button{
+      width:100%; border:none; background:none; padding:10px 12px; text-align:left; cursor:pointer; font-size:14px;
+    }
+    .menu-content button:hover{ background:#f1f5f9; }
 
     #chat{
       flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -112,9 +117,17 @@
     }
     #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
 
-    button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
-    #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
-    button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
+    /* [UPDATED] Nút gửi kiểu ChatGPT: tròn, nền đen, mũi tên trắng – ẩn khi không có input */
+    #sendArrow{
+      width:44px; height:44px; border-radius:50%;
+      border:1px solid #000; background:#000; color:#fff;
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+      transition:opacity .18s ease, transform .12s ease;
+      flex:0 0 auto;
+    }
+    #sendArrow.hidden{ opacity:0; pointer-events:none; transform:scale(.98); }
+    #sendArrow svg{ width:18px; height:18px; transform:rotate(90deg); display:block; }
+
     .typing{ font-style:italic; color:var(--muted) }
 
     #scrollBtn{
@@ -155,26 +168,39 @@
       <h1>Hi there! 👋</h1>
       <p>I am the AI Agent of PPS, here to support you 24/7</p>
     </div>
-    <div class="controls">
-      <button class="signout" id="signoutBtn">Sign out</button>
+
+    <!-- [UPDATED] Menu 3 chấm -->
+    <div class="menu">
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">⋮</button>
+      <div class="menu-content" id="menuContent">
+        <button id="signoutBtn">Sign out</button>
+      </div>
     </div>
   </header>
+
   <div id="chat"></div>
+
   <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
+
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <button id="sendBtn">Send</button>
+      <!-- [UPDATED] Nút gửi mũi tên – thay cho nút Send -->
+      <button id="sendArrow" class="hidden" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
     </div>
   </footer>
 </div>
 
 <script>
-/* Footer resize, keyboard handling */
+/* ===== Footer height & mobile keyboard ===== (giữ nguyên logic) */
 (function(){
   const footer=document.getElementById('appFooter');
   const chat=document.getElementById('chat');
@@ -206,7 +232,15 @@
 </script>
 
 <script>
-/* Login (không còn toggle streaming) */
+/* ===== Menu 3 chấm (mở/đóng) ===== */
+const menu = document.querySelector('.menu');
+const menuBtn = document.getElementById('menuBtn');
+menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menu.classList.toggle('open'); });
+document.addEventListener('click', (e)=>{ if(!menu.contains(e.target)) menu.classList.remove('open'); });
+</script>
+
+<script>
+/* ===== Login (không toggle streaming) ===== */
 const AUTO_LOGOUT_MS=30*60*1000;let inactivityTimer;
 const accessEl=document.getElementById('accessInput');
 const loginBtn=document.getElementById('loginBtn');
@@ -240,10 +274,18 @@ signoutBtn.addEventListener('click',signOut);
 </script>
 
 <script>
-/* Chat logic (mặc định STREAMING, có fallback non-stream) */
+/* ===== Chat logic: stream-first + fallback non-stream ===== */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
-const btnEl=document.getElementById('sendBtn');
+const sendArrow=document.getElementById('sendArrow'); // [UPDATED] nút mũi tên gửi
+
+// [UPDATED] Hiển thị/ẩn nút gửi theo nội dung
+const toggleSendVisibility = () => {
+  if(inputEl.value.trim()) sendArrow.classList.remove('hidden');
+  else sendArrow.classList.add('hidden');
+};
+inputEl.addEventListener('input', toggleSendVisibility);
+toggleSendVisibility();
 
 const SESSION_KEY='ppsai_session_id';
 let sessionId=localStorage.getItem(SESSION_KEY);
@@ -266,11 +308,13 @@ function saveMessages(arr){
 }
 let messages=loadMessages();renderHistory(messages);
 
-btnEl.addEventListener('click',onSend);
-/* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
+/* Enter: gửi (Shift+Enter xuống dòng) */
 inputEl.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();onSend();}
 });
+sendArrow.addEventListener('click',()=>onSend()); // [UPDATED] click nút mũi tên để gửi
+
+/* Auto-resize textarea */
 function autosizeTextarea(el){
   el.style.height='auto';
   const max=Math.round(window.innerHeight*0.40);
@@ -298,7 +342,7 @@ function renderMarkdown(md){
   return DOMPurify.sanitize(html);
 }
 
-/* appendBubble trả về node để stream có thể cập nhật trực tiếp */
+/* appendBubble trả node để stream cập nhật */
 function appendBubble(text,role='assistant',imageUrl=null){
   const d=document.createElement('div');
   d.className='msg '+(role==='user'?'user':'assistant');
@@ -333,7 +377,7 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* STREAMING: SSE/NDJSON */
+/* STREAMING: SSE/NDJSON — có xử lý JSON one-shot + flush buffer cuối */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -344,10 +388,16 @@ async function streamFromWebhook(sessionId,message,targetNode){
     {url:'/api/chat?stream=1',method:'POST'},
     {url:'/api/chat/stream',method:'POST'},
   ];
+
   let res=null;
   for(const a of attempts){
-    try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
+    try{
+      const r=await fetch(a.url,{method:a.method,headers,body});
+      if(r.ok){res=r;break;}
+    }catch{}
   }
+
+  // Nếu không có stream hợp lệ → fallback non-stream
   if(!res||!res.body){
     const {content,image_url}=await sendToWebhook(sessionId,message);
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
@@ -358,29 +408,81 @@ async function streamFromWebhook(sessionId,message,targetNode){
     }
     return content||'';
   }
-  const reader=res.body.getReader();const decoder=new TextDecoder();let buffer='';let acc='';
-  while(true){
-    const {done,value}=await reader.read(); if(done) break;
-    buffer+=decoder.decode(value,{stream:true});
-    const lines=buffer.split(/\r?\n/); buffer=lines.pop();
-    for(let raw of lines){
-      let line=raw.trim(); if(!line) continue;
-      if(line.startsWith('data:')) line=line.slice(5).trim();
-      if(line==='[DONE]'){buffer='';break;}
-      let parsed=null;
-      if(line.startsWith('{')||line.startsWith('[')){try{parsed=JSON.parse(line);}catch{}}
-      if(parsed&&typeof parsed==='object'){
-        if(parsed.type==='item'&&typeof parsed.content==='string'){acc+=parsed.content;}
-        else if(parsed.type==='end'){buffer='';break;}
-        else if(typeof parsed.delta==='string'){acc+=parsed.delta;}
-        else if(typeof parsed.content==='string'){acc+=parsed.content;}
-      }else{
-        acc+=line;
+
+  // Nếu endpoint trả JSON một cục → parse ngay
+  const ct=(res.headers.get('content-type')||'').toLowerCase();
+  if(ct.includes('application/json') && !ct.includes('event-stream') && !ct.includes('ndjson')){
+    const text=await res.text();
+    let acc='';
+    try{
+      const obj=JSON.parse(text);
+      if(Array.isArray(obj)){ const f=obj[0]||{}; acc=f.content||f.output||''; }
+      else{
+        if(typeof obj.delta==='string') acc+=obj.delta;
+        if(typeof obj.content==='string') acc=obj.content;
+        if(typeof obj.output==='string') acc=obj.output;
+      }
+    }catch{
+      acc=text;
+    }
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc||'(không có nội dung)');
+    chatEl.scrollTop=chatEl.scrollHeight;
+    return acc||'';
+  }
+
+  // Còn lại: SSE / NDJSON / text chunked
+  const reader=res.body.getReader();
+  const decoder=new TextDecoder();
+  let buffer=''; let acc='';
+
+  function consumeLine(line){
+    if(!line) return;
+    if(line.startsWith('data:')) line=line.slice(5).trim();
+    if(!line) return;
+    if(line==='[DONE]') return 'done';
+
+    // parse JSON per-line nếu có
+    if(line.startsWith('{')||line.startsWith('[')){
+      try{
+        const obj=JSON.parse(line);
+        if(obj){
+          if(obj.type==='item' && typeof obj.content==='string') acc+=obj.content;
+          else if(typeof obj.delta==='string') acc+=obj.delta;
+          else if(typeof obj.content==='string') acc+=obj.content;
+          else if(typeof obj.output==='string') acc+=obj.output;
+          if(obj.type==='end') return 'done';
+        }
+        return;
+      }catch{
+        // không parse được → cộng dạng text
       }
     }
+    acc+=line;
+  }
+
+  while(true){
+    const {done,value}=await reader.read();
+    if(value && value.length){
+      buffer+=decoder.decode(value,{stream:true});
+      const lines=buffer.split(/\r?\n/);
+      buffer=lines.pop()||'';
+      for(const raw of lines){
+        const state=consumeLine(raw.trim());
+        if(state==='done'){ buffer=''; break; }
+      }
+      targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+      chatEl.scrollTop=chatEl.scrollHeight;
+    }
+    if(done) break;
+  }
+
+  // FLUSH phần còn lại nếu thiếu newline cuối
+  if(buffer && buffer.trim()){
+    consumeLine(buffer.trim());
     targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
     chatEl.scrollTop=chatEl.scrollHeight;
   }
+
   return acc;
 }
 
@@ -397,13 +499,14 @@ function typing(show){
   } else if(!show&&t){ t.remove(); }
 }
 
-/* Mặc định dùng streaming; nếu lỗi sẽ fallback sang non-stream */
+/* Gửi tin: mặc định stream, nếu lỗi sẽ hiển thị lỗi & vẫn lưu lịch sử */
 function onSend(){
   const text=inputEl.value.trim(); if(!text) return;
   appendBubble(text,'user');
   messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
 
-  inputEl.value=''; autosizeTextarea(inputEl);
+  inputEl.value=''; toggleSendVisibility(); // [UPDATED] ẩn nút khi xóa nội dung
+  autosizeTextarea(inputEl);
 
   const node=appendBubble('','assistant'); // placeholder để stream vào
   streamFromWebhook(sessionId,text,node).then(finalText=>{
@@ -465,6 +568,7 @@ async function sendToWebhook(sessionId,message){
   return {content:acc, image_url};
 }
 
+/* Scroll-to-bottom button (giữ nguyên) */
 (function(){
   const chatBox=document.getElementById('chat');
   const scrollBtn=document.getElementById('scrollBtn');
