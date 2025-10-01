@@ -114,10 +114,10 @@
     .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
-    /* UPDATED: Trạng thái mờ như ChatGPT (không nền đen) */
+    /* UPDATED: Trạng thái mờ như ChatGPT (không nền) — chỉ một icon */
     .status-chip{
       position:absolute;
-      left:8px;             /* nằm ngay trên avatar */
+      left:8px;             /* ngay trên avatar */
       top:-12px;
       font-size:12px;
       color:var(--muted);   /* chữ mờ */
@@ -135,7 +135,7 @@
     .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative; } /* UPDATED: để gắn nút gửi trong ô nhập */
 
     #prompt{
-      flex:1; padding:12px 56px 12px 12px; /* UPDATED: chừa chỗ rộng hơn cho nút 40px */
+      flex:1; padding:12px 56px 12px 12px; /* UPDATED: chừa chỗ cho nút 40px */
       border:1px solid var(--bubble-border); border-radius:12px;
       outline:none; font-size:16px;
       resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
@@ -325,7 +325,7 @@ kebabSignOut?.addEventListener('click', ()=>{
 </script>
 
 <script>
-/* Chat logic (mặc định STREAMING, có xử lý non-stream trả một lần) */
+/* Chat logic (mặc định STREAMING, có xử lý non-stream/NDJSON) */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -443,7 +443,7 @@ function setStatusChip(node, text){
   if(!text) chip.remove();
 }
 
-/* STREAMING / NON-STREAM tự nhận biết theo content-type */
+/* STREAMING / NON-STREAM tự nhận biết theo content-type (đã fix NDJSON khi content-type không chuẩn) */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -454,12 +454,12 @@ async function streamFromWebhook(sessionId,message,targetNode){
     {url:'/api/chat?stream=1',method:'POST'},
     {url:'/api/chat/stream',method:'POST'},
   ];
+
   let res=null;
   for(const a of attempts){
     try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
   }
   if(!res){
-    // fallback qua non-stream endpoint
     const {content,image_url}=await sendToWebhook(sessionId,message);
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     if(image_url){
@@ -472,23 +472,40 @@ async function streamFromWebhook(sessionId,message,targetNode){
 
   const ct=(res.headers.get('content-type')||'').toLowerCase();
 
-  /* UPDATED: Nếu KHÔNG phải stream → xử lý như non-stream một lần */
+  /* UPDATED: Nếu KHÔNG phải stream → vẫn parse như NDJSON / JSON-per-line */
   if(!/event-stream|ndjson/.test(ct)){
     const text=await res.text();
-    let content='', image_url=null;
-    // cố gắng parse JSON
-    try{
-      const data = JSON.parse(text);
-      if(Array.isArray(data)){ const f=data[0]||{}; content=f.content||f.output||''; image_url=f.url||null; }
-      else { content=data.content||data.output||text; image_url=data.url||null; }
-    }catch{
-      // không phải JSON → dùng raw text
-      content = text;
+
+    // Parse NDJSON hoặc text gồm nhiều JSON lines
+    const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    let acc='', image_url=null;
+    for(const raw of lines){
+      let line = raw.startsWith('data:') ? raw.slice(5).trim() : raw;
+      if(!line) continue;
+
+      if(line.startsWith('{')||line.startsWith('[')){
+        try{
+          const obj=JSON.parse(line);
+          if(obj){
+            if(typeof obj.content==='string') acc+=obj.content;
+            if(typeof obj.delta==='string') acc+=obj.delta;
+            if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
+            if(obj.url && !image_url) image_url=obj.url;
+            continue;
+          }
+        }catch{}
+      }
+      // không phải JSON → append text thô
+      acc += (acc && !acc.endsWith(' ') ? ' ' : '') + line;
     }
-    // cập nhật Thought khi có nội dung
+
+    const content = acc || text;
+
+    // Khi nhận ký tự đầu tiên, chuyển chip từ Thinking→Thought
     if(content && !targetNode.querySelector('.content').innerHTML.trim()){
       setStatusChip(targetNode,'Thought'); /* UPDATED */
     }
+
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     chatEl.scrollTop=chatEl.scrollHeight;
     return content||'';
@@ -502,7 +519,7 @@ async function streamFromWebhook(sessionId,message,targetNode){
     const {done,value}=await reader.read();
     buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});
 
-    // parse dòng
+    // parse từng dòng
     let idx,start=0;
     while((idx=buffer.indexOf('\n',start))>=0){
       const raw=buffer.slice(start,idx).trim(); start=idx+1;
@@ -524,7 +541,7 @@ async function streamFromWebhook(sessionId,message,targetNode){
     buffer = buffer.slice(start);
 
     if(acc){
-      if(!started){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED: chuyển từ Thinking→Thought khi có data */
+      if(!started){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED */
       targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
       chatEl.scrollTop=chatEl.scrollHeight;
     }
@@ -532,7 +549,7 @@ async function streamFromWebhook(sessionId,message,targetNode){
     if(done) break;
   }
 
-  // flush phần dư cuối (phòng non-ndjson kết thúc không newline)
+  // flush phần dư cuối (phòng NDJSON không kết thúc bằng newline)
   const tail=buffer.trim();
   if(tail){
     try{
