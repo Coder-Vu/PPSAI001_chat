@@ -13,15 +13,40 @@ export async function onRequestPost({ request, env }) {
   const method = (envPick(env, ["N8N_METHOD", "N8n_method"]) || "POST").toUpperCase();
   const headers = new Headers();
 
-  // 1) Authorization: Bearer <token> (đơn giản cho N8N Header Auth)
+  // 1) Authorization: Bearer <token> (nếu có)
   const bearer = envPick(env, ["N8N_BEARER", "N8n_bearer", "N8n_beare"]);
   if (bearer) headers.set("Authorization", `Bearer ${bearer}`);
 
-  // 2) Header tuỳ biến (nếu webhook cần)
+  // 2) Header tuỳ biến (nếu webhook yêu cầu)
   const hName = envPick(env, ["N8N_HEADER_NAME", "N8n_header_name"]);
   const hVal  = envPick(env, ["N8N_HEADER_VALUE", "N8n_header_value"]);
   if (hName && hVal) headers.set(hName, hVal);
 
+  // Kiểm tra nếu là endpoint /api/chat/stream thì xử lý streaming SSE
+  const urlPath = new URL(request.url).pathname;
+  const isStream = urlPath.endsWith("/stream");
+
+  if (isStream) {
+    // Forward stream sang N8N (SSE)
+    const bodyText = await request.text();
+    headers.set("content-type", "application/json");
+
+    const upstream = await fetch(url, { method: "POST", headers, body: bodyText });
+
+    // Trả stream về client (SSE giữ nguyên)
+    const refreshCookie = setAuthCookie("1", 30 * 60);
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        "connection": "keep-alive",
+        "Set-Cookie": refreshCookie,
+      },
+    });
+  }
+
+  // Non-stream (mặc định JSON)
   let upstream;
   if (method === "POST") {
     const bodyText = await request.text();
