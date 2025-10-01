@@ -27,7 +27,6 @@
       display:flex; justify-content:center; align-items:stretch;
       min-height:100svh; overflow-x:hidden;
     }
-    input, textarea, button { font-family: var(--ui-font); }
     .hidden{display:none!important}
 
     /* Login */
@@ -59,12 +58,10 @@
       display:flex; justify-content:space-between; align-items:center;
       padding:8px 12px; border-bottom:1px solid var(--bubble-border); background:#fff;
     }
-    header .title{ text-align:center; flex:1 }
-    header img{ height:clamp(32px,6vw,64px); width:auto; object-fit:contain; display:block; margin:0 auto 4px }
-    header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
-    header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
-
-    /* Chỉ còn nút Sign out */
+    header .title{ text-align:left; display:flex; align-items:center; gap:10px }
+    header img{ height:32px; width:auto; object-fit:contain; display:block }
+    header h1{ margin:0; font-size:18px; font-weight:700 }
+    header p{ margin:0; font-size:13px; color:#555 }
     header .controls{ display:flex; gap:10px; align-items:center }
     header button.signout{
       padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
@@ -85,7 +82,7 @@
     .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
           word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
           display:flex; align-items:flex-start; gap:10px }
-    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
+    .msg.assistant{ align-self:flex-start; background:var(--bubble-bot) }
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
     .content a{ color:#0ea5e9; text-decoration:underline }
@@ -114,7 +111,6 @@
     button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
     #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
-    .typing{ font-style:italic; color:var(--muted) }
 
     #scrollBtn{
       position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
@@ -151,8 +147,10 @@
   <header>
     <div class="title">
       <img src="logo.png" alt="PPS Logo">
-      <h1>Hi there! 👋</h1>
-      <p>I am the AI Agent of PPS, here to support you 24/7</p>
+      <div>
+        <h1 style="margin:0">PPS AI Agent</h1>
+        <p style="margin-top:4px">Here to support you 24/7</p>
+      </div>
     </div>
     <div class="controls">
       <button class="signout" id="signoutBtn">Sign out</button>
@@ -221,6 +219,7 @@ const signoutBtn=document.getElementById('signoutBtn');
 
 function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
 function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
+
 async function checkAccess(){
   const val=accessEl.value.trim();if(!val){loginMsg.textContent='Please enter the Access code';loginMsg.style.display='block';return;}
   loginBtn.disabled=true;const oldLabel=loginBtn.textContent;loginBtn.textContent='Verifying...';loginMsg.style.display='none';
@@ -233,6 +232,7 @@ async function checkAccess(){
 }
 loginBtn.addEventListener('click',checkAccess);
 accessEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkAccess();}});
+
 async function signOut(){
   try{await fetch("/api/logout",{method:"POST"});}catch{}
   chatBox.classList.add('hidden');
@@ -243,6 +243,7 @@ async function signOut(){
   const chatEl=document.getElementById('chat');if(chatEl)chatEl.innerHTML='';
 }
 signoutBtn.addEventListener('click',signOut);
+
 (async()=>{const r=await fetch("/api/session").catch(()=>null);
   if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}
 })();
@@ -398,7 +399,7 @@ async function streamFromWebhook(sessionId,message,targetNode){
   // Còn lại: SSE / NDJSON / text chunked
   const reader=res.body.getReader();
   const decoder=new TextDecoder();
-  let buffer=''; let acc='';
+  let buffer=''; let acc=''; let imageUrl=null;
 
   function consumeLine(line){
     if(!line) return;
@@ -411,11 +412,21 @@ async function streamFromWebhook(sessionId,message,targetNode){
       try{
         const obj=JSON.parse(line);
         if(obj){
+          // Kiểu N8N JSONL: {type:item|begin|end, content:"..."}
           if(obj.type==='item' && typeof obj.content==='string') acc+=obj.content;
+          else if(obj.type==='end') return 'done';
+          else if(obj.type==='begin') {/*ignore*/}
+
+          // Kiểu delta/choices (OpenAI-like)
           else if(typeof obj.delta==='string') acc+=obj.delta;
+          else if(obj.choices && obj.choices[0] && obj.choices[0].delta && obj.choices[0].delta.content){
+            acc+=obj.choices[0].delta.content;
+          }
+          // Generic content/output
           else if(typeof obj.content==='string') acc+=obj.content;
           else if(typeof obj.output==='string') acc+=obj.output;
-          if(obj.type==='end') return 'done';
+
+          if(obj.url && !imageUrl) imageUrl=obj.url;
         }
         return;
       }catch{
@@ -448,40 +459,17 @@ async function streamFromWebhook(sessionId,message,targetNode){
     chatEl.scrollTop=chatEl.scrollHeight;
   }
 
+  // Nếu có image url (trả trong stream), chèn ra sau
+  if(imageUrl){
+    const w=document.createElement('div');
+    w.className='content';
+    w.innerHTML=`<a href="${encodeURI(imageUrl)}" target="_blank" rel="noopener">
+      <img src="${encodeURI(imageUrl)}" alt="Image from AI">
+    </a>`;
+    targetNode.insertAdjacentElement('afterend', w);
+  }
+
   return acc;
-}
-
-function typing(show){
-  let t=document.getElementById('typing');
-  if(show&&!t){
-    t=document.createElement('div'); t.id='typing'; t.className='msg assistant typing';
-    const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
-    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
-    t.appendChild(av);
-    const span=document.createElement('div'); span.className='content'; span.textContent='Thinking...';
-    t.appendChild(span);
-    chatEl.appendChild(t); chatEl.scrollTop=chatEl.scrollHeight;
-  } else if(!show&&t){ t.remove(); }
-}
-
-/* Mặc định dùng streaming; nếu lỗi sẽ fallback non-stream */
-function onSend(){
-  const text=inputEl.value.trim(); if(!text) return;
-  appendBubble(text,'user');
-  messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
-
-  inputEl.value=''; autosizeTextarea(inputEl);
-
-  const node=appendBubble('','assistant'); // placeholder để stream vào
-  streamFromWebhook(sessionId,text,node).then(finalText=>{
-    messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
-    saveMessages(messages);
-  }).catch(err=>{
-    const msg=`Error (stream): ${err}`;
-    node.querySelector('.content').innerHTML=renderMarkdown(msg);
-    messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
-    saveMessages(messages);
-  });
 }
 
 /* NON-STREAM fallback: chịu được JSON hoặc NDJSON/text trả về */
@@ -532,19 +520,44 @@ async function sendToWebhook(sessionId,message){
   return {content:acc, image_url};
 }
 
+/* Gửi */
+function onSend(){
+  const text=inputEl.value.trim(); if(!text) return;
+  appendBubble(renderMarkdown(text),'user');
+  messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
+
+  inputEl.value=''; autosizeTextarea(inputEl);
+
+  const node=appendBubble('','assistant'); // placeholder để stream vào
+  streamFromWebhook(sessionId,text,node).then(finalText=>{
+    messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
+    saveMessages(messages);
+  }).catch(err=>{
+    const msg=`Error (stream): ${err}`;
+    node.querySelector('.content').innerHTML=renderMarkdown(msg);
+    messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
+    saveMessages(messages);
+  });
+}
+btnEl.addEventListener('click',onSend);
+inputEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();onSend();}});
+
+/* Nút cuộn xuống đáy */
 (function(){
-  const chatBox=document.getElementById('chat');
-  const scrollBtn=document.getElementById('scrollBtn');
+  const chatBox = document.getElementById('chat');
+  const scrollBtn = document.getElementById('scrollBtn');
   function toggleBtn(){
-    const threshold=200;
+    const threshold = 200;
     if (chatBox.scrollHeight - chatBox.scrollTop > chatBox.clientHeight + threshold) {
       scrollBtn.classList.add('show');
     } else {
       scrollBtn.classList.remove('show');
     }
   }
-  chatBox.addEventListener('scroll',toggleBtn);
-  scrollBtn.addEventListener('click',()=>{chatBox.scrollTop=chatBox.scrollHeight;});
+  chatBox.addEventListener('scroll', toggleBtn);
+  scrollBtn.addEventListener('click', () => {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
   toggleBtn();
 })();
 </script>
