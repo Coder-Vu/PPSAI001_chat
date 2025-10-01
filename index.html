@@ -64,9 +64,8 @@
     header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
     header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
 
-    /* Chỉ còn nút Sign out (bỏ toggle) */
+    /* Chỉ còn nút Sign out */
     header .controls{ display:flex; gap:10px; align-items:center }
-
     header button.signout{
       padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
     }
@@ -96,8 +95,6 @@
     .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
-    @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
-
     footer{
       position:fixed; left:50%; transform:translateX(-50%);
       width:min(920px, 100%); bottom:0; z-index:6;
@@ -114,9 +111,8 @@
 
     button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
     #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
-    button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
-    .typing{ font-style:italic; color:var(--muted) }
 
+    /* Scroll button */
     #scrollBtn{
       position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
       background:#fff; color:#000; border:1px solid #e5e7eb;
@@ -159,12 +155,15 @@
       <button class="signout" id="signoutBtn">Sign out</button>
     </div>
   </header>
+
   <div id="chat"></div>
+
   <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
+
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
@@ -174,11 +173,12 @@
 </div>
 
 <script>
-/* Footer resize, keyboard handling */
+/* ===== Footer height & mobile keyboard ===== */
 (function(){
   const footer=document.getElementById('appFooter');
   const chat=document.getElementById('chat');
   const wrap=document.querySelector('.chat-wrapper');
+
   function applyFooterHeight(){
     const h=footer?.offsetHeight||64;
     document.documentElement.style.setProperty('--footer-h',h+'px');
@@ -186,6 +186,7 @@
   applyFooterHeight();
   window.addEventListener('resize',applyFooterHeight);
   if(footer&&'ResizeObserver'in window)new ResizeObserver(applyFooterHeight).observe(footer);
+
   function setViewportBindings(){
     if(!window.visualViewport)return;
     const vv=window.visualViewport;
@@ -193,12 +194,13 @@
       if(wrap)wrap.style.height=vv.height+'px';
       const kb=Math.max(0,(window.innerHeight-vv.height-vv.offsetTop));
       footer.style.bottom=kb+'px';
-      if(kb>0)document.body.classList.add('kbd-open');else document.body.classList.remove('kbd-open');
+      if(kb>0){document.body.classList.add('kbd-open');}else{document.body.classList.remove('kbd-open');}
       chat.scrollTop=chat.scrollHeight;
     };
     vv.addEventListener('resize',setHeights); vv.addEventListener('scroll',setHeights); setHeights();
   }
   setViewportBindings();
+
   const input=document.getElementById('prompt');
   input.addEventListener('focus',()=>{setTimeout(()=>{window.scrollTo(0,0);chat.scrollTop=chat.scrollHeight;},120)});
   input.addEventListener('blur',()=>{document.body.classList.remove('kbd-open');});
@@ -206,8 +208,9 @@
 </script>
 
 <script>
-/* Login (không còn toggle streaming) */
+/* ===== Login + auto logout ===== */
 const AUTO_LOGOUT_MS=30*60*1000;let inactivityTimer;
+
 const accessEl=document.getElementById('accessInput');
 const loginBtn=document.getElementById('loginBtn');
 const loginBox=document.getElementById('login');
@@ -215,32 +218,67 @@ const chatBox=document.getElementById('chatUI');
 const loginMsg=document.getElementById('loginMsg');
 const signoutBtn=document.getElementById('signoutBtn');
 
-function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
-function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
+function resetInactivityTimer(){
+  clearTimeout(inactivityTimer);
+  inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);
+}
+function initInactivityListeners(){
+  ["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{
+    document.addEventListener(ev,resetInactivityTimer,{passive:true});
+  });
+  resetInactivityTimer();
+}
+
 async function checkAccess(){
-  const val=accessEl.value.trim();if(!val){loginMsg.textContent='Please enter the Access code';loginMsg.style.display='block';return;}
-  loginBtn.disabled=true;const oldLabel=loginBtn.textContent;loginBtn.textContent='Verifying...';loginMsg.style.display='none';
+  const val=accessEl.value.trim();
+  if(!val){loginMsg.textContent='Please enter the Access code';loginMsg.style.display='block';return;}
+
+  loginBtn.disabled=true;
+  const oldLabel=loginBtn.textContent;
+  loginBtn.textContent='Verifying...';
+  loginMsg.style.display='none';
+
   try{
     const res=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:val})});
-    if(res.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();accessEl.value='';}
-    else{let reason='Invalid Access Code';try{const j=await res.json();if(j?.error)reason=j.error;}catch{}loginMsg.textContent=reason;loginMsg.style.display='block';}
-  }catch(e){loginMsg.textContent='Unable to connect. Please try again later.';loginMsg.style.display='block';}
-  finally{loginBtn.disabled=false;loginBtn.textContent=oldLabel;}
+    if(res.ok){
+      loginBox.classList.add('hidden');
+      chatBox.classList.remove('hidden');
+      initInactivityListeners();
+      accessEl.value='';
+    }else{
+      let reason='Invalid Access Code';
+      try{const j=await res.json(); if(j?.error)reason=j.error;}catch{}
+      loginMsg.textContent=reason; loginMsg.style.display='block';
+    }
+  }catch(e){
+    loginMsg.textContent='Unable to connect. Please try again later.'; loginMsg.style.display='block';
+  }finally{
+    loginBtn.disabled=false; loginBtn.textContent=oldLabel;
+  }
 }
+
 loginBtn.addEventListener('click',checkAccess);
 accessEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkAccess();}});
+
 async function signOut(){
   try{await fetch("/api/logout",{method:"POST"});}catch{}
-  chatBox.classList.add('hidden');loginBox.classList.remove('hidden');clearTimeout(inactivityTimer);
-  localStorage.removeItem('ppsai_session_id');localStorage.removeItem('ppsai_messages');
-  const chatEl=document.getElementById('chat');if(chatEl)chatEl.innerHTML='';
+  chatBox.classList.add('hidden');
+  loginBox.classList.remove('hidden');
+  clearTimeout(inactivityTimer);
+  localStorage.removeItem('ppsai_session_id');
+  localStorage.removeItem('ppsai_messages');
+  const chatEl=document.getElementById('chat'); if(chatEl) chatEl.innerHTML='';
 }
 signoutBtn.addEventListener('click',signOut);
-(async()=>{const r=await fetch("/api/session").catch(()=>null);if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}})();
+
+/* Tự vào chat nếu còn phiên */
+(async()=>{const r=await fetch("/api/session").catch(()=>null);
+  if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}
+})();
 </script>
 
 <script>
-/* Chat logic (mặc định STREAMING, có fallback non-stream) */
+/* ===== Chat logic (stream-first, fallback non-stream) ===== */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -252,25 +290,23 @@ if(!sessionId){
   localStorage.setItem(SESSION_KEY,sessionId);
 }
 
-/* Lịch sử có TTL & giới hạn */
+/* Lịch sử với TTL & giới hạn */
 const MSGS_KEY='ppsai_messages';
-const HISTORY_TTL_DAYS=30,HISTORY_MAX_ITEMS=200,HISTORY_MAX_BYTES=800000;
+const HISTORY_TTL_DAYS=30, HISTORY_MAX_ITEMS=200, HISTORY_MAX_BYTES=800000;
 function loadMessages(){try{return JSON.parse(localStorage.getItem(MSGS_KEY)||'[]');}catch{return[]}}
 function saveMessages(arr){
-  const now=Date.now(),ttlMs=HISTORY_TTL_DAYS*24*60*60*1000;
+  const now=Date.now(), ttlMs=HISTORY_TTL_DAYS*24*60*60*1000;
   let pruned=arr.filter(m=>!m.ts||(now-m.ts)<=ttlMs);
-  if(pruned.length>HISTORY_MAX_ITEMS)pruned=pruned.slice(pruned.length-HISTORY_MAX_ITEMS);
+  if(pruned.length>HISTORY_MAX_ITEMS) pruned=pruned.slice(pruned.length-HISTORY_MAX_ITEMS);
   let json=JSON.stringify(pruned);
-  while(json.length>HISTORY_MAX_BYTES&&pruned.length>1){pruned.shift();json=JSON.stringify(pruned);}
+  while(json.length>HISTORY_MAX_BYTES&&pruned.length>1){ pruned.shift(); json=JSON.stringify(pruned); }
   localStorage.setItem(MSGS_KEY,json);
 }
-let messages=loadMessages();renderHistory(messages);
+let messages=loadMessages(); renderHistory(messages);
 
 btnEl.addEventListener('click',onSend);
-/* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
-inputEl.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();onSend();}
-});
+/* Enter gửi, Shift+Enter xuống dòng + auto-resize */
+inputEl.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); onSend(); }});
 function autosizeTextarea(el){
   el.style.height='auto';
   const max=Math.round(window.innerHeight*0.40);
@@ -290,15 +326,15 @@ chatEl.addEventListener('click',e=>{
   try{ window.open(a.href,'_blank','noopener,noreferrer'); }catch{ a.click(); }
 });
 
-/* Markdown render */
-marked.setOptions({gfm:true,breaks:true,headerIds:false,mangle:false});
+/* Markdown */
+marked.setOptions({ gfm:true, breaks:true, headerIds:false, mangle:false });
 function renderMarkdown(md){
   let html=marked.parse(md||'');
   html=html.replace(/<a /g,'<a target="_blank" rel="noopener" ');
   return DOMPurify.sanitize(html);
 }
 
-/* appendBubble trả về node để stream có thể cập nhật trực tiếp */
+/* Bubbles */
 function appendBubble(text,role='assistant',imageUrl=null){
   const d=document.createElement('div');
   d.className='msg '+(role==='user'?'user':'assistant');
@@ -333,7 +369,7 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* STREAMING: SSE/NDJSON */
+/* STREAMING: hỗ trợ SSE/NDJSON, fallback non-stream */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -346,8 +382,13 @@ async function streamFromWebhook(sessionId,message,targetNode){
   ];
   let res=null;
   for(const a of attempts){
-    try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
+    try{
+      const r=await fetch(a.url,{method:a.method,headers,body});
+      if(r.ok){res=r;break;}
+    }catch{}
   }
+
+  /* Fallback non-stream */
   if(!res||!res.body){
     const {content,image_url}=await sendToWebhook(sessionId,message);
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
@@ -358,48 +399,52 @@ async function streamFromWebhook(sessionId,message,targetNode){
     }
     return content||'';
   }
-  const reader=res.body.getReader();const decoder=new TextDecoder();let buffer='';let acc='';
+
+  /* Stream */
+  const reader=res.body.getReader();
+  const decoder=new TextDecoder();
+  let buffer=''; let acc='';
+
   while(true){
-    const {done,value}=await reader.read(); if(done) break;
+    const {done,value}=await reader.read();
+    if(done) break;
     buffer+=decoder.decode(value,{stream:true});
-    const lines=buffer.split(/\r?\n/); buffer=lines.pop();
+
+    const lines=buffer.split(/\r?\n/);
+    buffer=lines.pop(); // giữ phần còn dở
+
     for(let raw of lines){
       let line=raw.trim(); if(!line) continue;
       if(line.startsWith('data:')) line=line.slice(5).trim();
-      if(line==='[DONE]'){buffer='';break;}
+      if(line==='[DONE]') { buffer=''; break; }
+
+      // Thử parse JSON (SSE JSON / NDJSON)
       let parsed=null;
-      if(line.startsWith('{')||line.startsWith('[')){try{parsed=JSON.parse(line);}catch{}}
-      if(parsed&&typeof parsed==='object'){
-        if(parsed.type==='item'&&typeof parsed.content==='string'){acc+=parsed.content;}
-        else if(parsed.type==='end'){buffer='';break;}
-        else if(typeof parsed.delta==='string'){acc+=parsed.delta;}
-        else if(typeof parsed.content==='string'){acc+=parsed.content;}
+      if(line.startsWith('{')||line.startsWith('[')){
+        try{parsed=JSON.parse(line);}catch{}
+      }
+
+      if(parsed && typeof parsed==='object'){
+        if(parsed.type==='item' && typeof parsed.content==='string') acc+=parsed.content;
+        else if(parsed.type==='end') { buffer=''; break; }
+        else if(typeof parsed.delta==='string') acc+=parsed.delta;
+        else if(typeof parsed.content==='string') acc+=parsed.content;
       }else{
+        // text thuần
         acc+=line;
       }
     }
+
     targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
     chatEl.scrollTop=chatEl.scrollHeight;
   }
+
   return acc;
 }
 
-function typing(show){
-  let t=document.getElementById('typing');
-  if(show&&!t){
-    t=document.createElement('div'); t.id='typing'; t.className='msg assistant typing';
-    const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
-    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
-    t.appendChild(av);
-    const span=document.createElement('div'); span.className='content'; span.textContent='Thinking...';
-    t.appendChild(span);
-    chatEl.appendChild(t); chatEl.scrollTop=chatEl.scrollHeight;
-  } else if(!show&&t){ t.remove(); }
-}
-
-/* Mặc định dùng streaming; nếu lỗi sẽ fallback sang non-stream */
 function onSend(){
   const text=inputEl.value.trim(); if(!text) return;
+
   appendBubble(text,'user');
   messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
 
@@ -417,14 +462,11 @@ function onSend(){
   });
 }
 
-/* NON-STREAM fallback: chịu được JSON hoặc NDJSON/text trả về */
+/* Non-stream fetch có thể gặp JSON/NDJSON/text */
 async function sendToWebhook(sessionId,message){
   const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson'};
   const res=await fetch("/api/chat",{method:'POST',headers,body:JSON.stringify({sessionId,chatInput:message})});
-  const statusErr = async () => {
-    const t=await res.text().catch(()=> '');
-    throw new Error(`${res.status} ${t.slice(0,200)}`);
-  };
+  const statusErr = async () => { const t=await res.text().catch(()=> ''); throw new Error(`${res.status} ${t.slice(0,200)}`); };
   if(!res.ok) return statusErr();
 
   const ct=(res.headers.get('content-type')||'').toLowerCase();
@@ -465,9 +507,11 @@ async function sendToWebhook(sessionId,message){
   return {content:acc, image_url};
 }
 
+/* Nút cuộn xuống đáy khi không ở đáy */
 (function(){
   const chatBox=document.getElementById('chat');
   const scrollBtn=document.getElementById('scrollBtn');
+
   function toggleBtn(){
     const threshold=200;
     if (chatBox.scrollHeight - chatBox.scrollTop > chatBox.clientHeight + threshold) {
