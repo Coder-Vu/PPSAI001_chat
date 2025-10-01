@@ -32,11 +32,14 @@ export async function onRequestPost({ request, env }) {
   const hVal = envPick(env, ["N8N_HEADER_VALUE", "N8n_header_value"]);
   if (hName && hVal) headers.set(hName, hVal);
 
-  // Kiểm tra nếu là endpoint /api/chat/stream thì passthrough stream JSON
-  const urlPath = new URL(request.url).pathname;
-  const isStream = urlPath.endsWith("/stream");
+  // ✅ Phương án B: hỗ trợ cả /api/chat/stream và /api/chat?stream=1
+  const reqUrl = new URL(request.url);
+  const urlPath = reqUrl.pathname;
+  const urlSearch = reqUrl.search;
+  const isStream = urlPath.endsWith("/stream") || urlSearch.includes("stream=1");
 
   if (isStream) {
+    // Forward streaming sang N8N (SSE/NDJSON)
     const bodyText = await request.text();
     headers.set("content-type", "application/json");
 
@@ -59,7 +62,7 @@ export async function onRequestPost({ request, env }) {
     });
   }
 
-  // Non-stream (mặc định JSON, full response)
+  // Non-stream (mặc định JSON trả một lần)
   let upstream;
   if (method === "POST") {
     const bodyText = await request.text();
