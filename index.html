@@ -103,7 +103,7 @@
 
     .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
           word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
-          display:flex; align-items:flex-start; gap:10px; }
+          display:flex; align-items:flex-start; gap:10px }
     .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); position:relative; } /* UPDATED: để gắn status text */
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
@@ -401,9 +401,14 @@ function appendBubble(text,role='assistant',imageUrl=null){
   d.className='msg '+(role==='user'?'user':'assistant');
 
   if(role==='assistant'){
+    const avWrap=document.createElement('div');
+    avWrap.style.display='flex'; avWrap.style.flexDirection='column'; avWrap.style.alignItems='flex-start';
+    /* UPDATED: chip trạng thái trên avatar */
+    const chip=document.createElement('span'); chip.className='status-chip'; chip.id='statusChip'; avWrap.appendChild(chip);
     const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
     av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
-    d.appendChild(av);
+    avWrap.appendChild(av);
+    d.appendChild(avWrap);
   }
 
   const content=document.createElement('div');
@@ -433,17 +438,21 @@ function renderHistory(arr){
 /* UPDATED: Status text mờ gắn vào đúng bubble assistant (duy nhất 1 icon) */
 function setStatusChip(node, text){
   if(!node) return;
-  let chip = node.querySelector('.status-chip');
+  let chip = node.querySelector('#statusChip');
   if(!chip){
     chip = document.createElement('span');
     chip.className = 'status-chip';
-    node.appendChild(chip);
+    chip.id='statusChip';
+    node.prepend(chip);
   }
   chip.textContent = text || '';
-  if(!text) chip.remove();
+  if(!text) chip.textContent='';
 }
 
-/* STREAMING / NON-STREAM tự nhận biết theo content-type (đã fix NDJSON khi content-type không chuẩn) */
+/* STREAMING / NON-STREAM tự nhận biết theo content-type
+   - UPDATED: chống lặp NDJSON (dedupe theo metadata.timestamp & lastChunk)
+   - UPDATED: nhánh non-stream parse được { output } và NDJSON trả về sai content-type
+*/
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -460,7 +469,11 @@ async function streamFromWebhook(sessionId,message,targetNode){
     try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
   }
   if(!res){
+    // fallback qua non-stream endpoint có sẵn
     const {content,image_url}=await sendToWebhook(sessionId,message);
+    if(content && !targetNode.querySelector('.content').innerHTML.trim()){
+      setStatusChip(targetNode,'Thought');
+    }
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     if(image_url){
       const w=document.createElement('div');w.className='content';
@@ -472,48 +485,107 @@ async function streamFromWebhook(sessionId,message,targetNode){
 
   const ct=(res.headers.get('content-type')||'').toLowerCase();
 
-  /* UPDATED: Nếu KHÔNG phải stream → vẫn parse như NDJSON / JSON-per-line */
-  if(!/event-stream|ndjson/.test(ct)){
-    const text=await res.text();
-
-    // Parse NDJSON hoặc text gồm nhiều JSON lines
+  // Helper: đọc block text NDJSON/JSON-per-line và ghép nội dung
+  function parseNdjsonText(text){
     const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
     let acc='', image_url=null;
+    const seenTs=new Set();           /* UPDATED: chống lặp bằng timestamp */
+    let lastChunk='';                 /* UPDATED: fallback chống lặp theo chuỗi */
+
     for(const raw of lines){
       let line = raw.startsWith('data:') ? raw.slice(5).trim() : raw;
       if(!line) continue;
 
+      let added = '';
       if(line.startsWith('{')||line.startsWith('[')){
         try{
           const obj=JSON.parse(line);
-          if(obj){
-            if(typeof obj.content==='string') acc+=obj.content;
-            if(typeof obj.delta==='string') acc+=obj.delta;
-            if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
-            if(obj.url && !image_url) image_url=obj.url;
-            continue;
+
+          // chống lặp theo timestamp nếu có
+          const ts = obj?.metadata?.timestamp;
+          if(ts!=null){
+            if(seenTs.has(ts)) continue; /* UPDATED */
+            seenTs.add(ts);
           }
-        }catch{}
+
+          // Ưu tiên các trường quen thuộc của stream
+          if(obj?.type==='item' && typeof obj?.content==='string'){ added = obj.content; }
+          else if(typeof obj?.delta==='string'){ added = obj.delta; }
+          else if(typeof obj?.content==='string'){ added = obj.content; }
+          /* UPDATED: hỗ trợ output khi non-stream */
+          else if(typeof obj?.output==='string'){ added = obj.output; }
+
+          // Ảnh (nếu có)
+          if(obj?.url && !image_url) image_url=obj.url;
+
+          // Nếu không rơi vào case nào thì bỏ qua JSON này (không append raw)
+          if(added){
+            if(added===lastChunk) continue;  /* UPDATED: chống lặp chunk kề nhau */
+            acc += added;
+            lastChunk = added;
+            continue;
+          }else{
+            continue; // không có nội dung để ghép
+          }
+        }catch{
+          // not JSON → fallthrough append raw dưới
+        }
       }
-      // không phải JSON → append text thô
+
+      // không phải JSON → append text thô (ít gặp)
+      if(line===lastChunk) continue;   /* UPDATED: chống lặp */
       acc += (acc && !acc.endsWith(' ') ? ' ' : '') + line;
+      lastChunk = line;
+    }
+    return {content: acc, image_url};
+  }
+
+  /* UPDATED: Nếu KHÔNG phải stream → vẫn parse như NDJSON / JSON-per-line
+     và bóc cả { output } nếu webhook trả JSON một lần */
+  if(!/event-stream|ndjson/.test(ct)){
+    const text=await res.text();
+
+    // Thử parse nhanh nếu là 1 JSON object gọn
+    const trimmed = text.trim();
+    if(trimmed.startsWith('{') && trimmed.endsWith('}')){
+      try{
+        const obj = JSON.parse(trimmed);
+        const content = (typeof obj.content==='string') ? obj.content
+                      : (typeof obj.output==='string')  ? obj.output
+                      : '';
+        if(content){
+          if(content && !targetNode.querySelector('.content').innerHTML.trim()){
+            setStatusChip(targetNode,'Thought');
+          }
+          targetNode.querySelector('.content').innerHTML=renderMarkdown(content);
+          chatEl.scrollTop=chatEl.scrollHeight;
+          return content;
+        }
+      }catch{}
     }
 
-    const content = acc || text;
+    // Còn lại: xử lý như NDJSON
+    const {content,image_url} = parseNdjsonText(text);
+    const final = content || text;
 
-    // Khi nhận ký tự đầu tiên, chuyển chip từ Thinking→Thought
-    if(content && !targetNode.querySelector('.content').innerHTML.trim()){
+    if(final && !targetNode.querySelector('.content').innerHTML.trim()){
       setStatusChip(targetNode,'Thought'); /* UPDATED */
     }
-
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(final||'(không có nội dung)');
+    if(image_url){
+      const w=document.createElement('div');w.className='content';
+      w.innerHTML=`<a href="${encodeURI(image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(image_url)}" alt="Image from AI"></a>`;
+      chatEl.appendChild(w);
+    }
     chatEl.scrollTop=chatEl.scrollHeight;
-    return content||'';
+    return final||'';
   }
 
   /* STREAM thực sự (SSE/NDJSON) */
   const reader=res.body.getReader();const decoder=new TextDecoder();
   let buffer='';let acc=''; let started=false;
+  const seenTs=new Set();              /* UPDATED */
+  let lastChunk='';                    /* UPDATED */
 
   while(true){
     const {done,value}=await reader.read();
@@ -527,16 +599,39 @@ async function streamFromWebhook(sessionId,message,targetNode){
       let line=raw;
       if(line.startsWith('data:')) line=line.slice(5).trim();
 
-      let parsed=null;
-      if(line.startsWith('{')||line.startsWith('[')){ try{ parsed=JSON.parse(line); }catch{} }
+      let added='';
+      if(line.startsWith('{')||line.startsWith('[')){
+        try{
+          const obj=JSON.parse(line);
 
-      if(parsed&&typeof parsed==='object'){
-        if(parsed.type==='item'&&typeof parsed.content==='string'){ acc+=parsed.content; }
-        else if(typeof parsed.delta==='string'){ acc+=parsed.delta; }
-        else if(typeof parsed.content==='string'){ acc+=parsed.content; }
+          // END event
+          if(obj?.type==='end') { /* kết thúc stream */ }
+
+          // chống lặp theo timestamp
+          const ts=obj?.metadata?.timestamp;
+          if(ts!=null){
+            if(seenTs.has(ts)) continue;     /* UPDATED */
+            seenTs.add(ts);
+          }
+
+          if(obj?.type==='item' && typeof obj?.content==='string'){ added=obj.content; }
+          else if(typeof obj?.delta==='string'){ added=obj.delta; }
+          else if(typeof obj?.content==='string'){ added=obj.content; }
+
+          // ignore nếu rỗng
+          if(!added) continue;
+        }catch{
+          // not JSON → coi là text thô
+          added = (acc && !acc.endsWith(' ') ? ' ' : '') + line;
+        }
       }else{
-        if(line!=='[DONE]') acc += (acc && !acc.endsWith(' ') ? ' ' : '') + line;
+        // non-JSON line
+        added = (acc && !acc.endsWith(' ') ? ' ' : '') + line;
       }
+
+      if(added===lastChunk) continue;        /* UPDATED: chống lặp chunk kề nhau */
+      acc += added;
+      lastChunk = added;
     }
     buffer = buffer.slice(start);
 
@@ -552,19 +647,26 @@ async function streamFromWebhook(sessionId,message,targetNode){
   // flush phần dư cuối (phòng NDJSON không kết thúc bằng newline)
   const tail=buffer.trim();
   if(tail){
-    try{
-      const obj=JSON.parse(tail);
-      if(obj){
-        if(typeof obj.content==='string') acc+=obj.content;
-        if(typeof obj.delta==='string') acc+=obj.delta;
-        if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
-        if(typeof obj==='string') acc+=obj;
+    let added='';
+    if(tail.startsWith('{')||tail.startsWith('[')){
+      try{
+        const obj=JSON.parse(tail);
+        const ts=obj?.metadata?.timestamp;
+        if(ts==null || !seenTs.has(ts)){
+          if(obj?.type==='item' && typeof obj?.content==='string'){ added=obj.content; }
+          else if(typeof obj?.delta==='string'){ added=obj.delta; }
+          else if(typeof obj?.content==='string'){ added=obj.content; }
+        }
+      }catch{
+        added = (acc && !acc.endsWith(' ') ? ' ' : '') + tail;
       }
-    }catch{
-      if(tail!=='[DONE]') acc += (acc && !acc.endsWith(' ') ? ' ' : '') + tail;
+    }else{
+      added = (acc && !acc.endsWith(' ') ? ' ' : '') + tail;
     }
-    if(!started && acc){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED */
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+    if(added && added!==lastChunk){            /* UPDATED */
+      acc += added;
+      targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+    }
   }
 
   return acc;
