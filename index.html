@@ -64,19 +64,10 @@
     header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
     header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
 
-    /* Chỉ còn nút Sign out (bỏ toggle) */
+    /* Kebab menu 3 chấm + Sign out */
     header .controls{ display:flex; gap:10px; align-items:center }
-
-    header button.signout{
-      padding:6px 12px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:13px
-    }
-    header button.signout:hover{background:var(--brand-2); border-color:var(--brand-2)}
-
-    /* UPDATED: Kebab menu 3 chấm giống ChatGPT */
-    .kebab{ /* nút 3 chấm */
-      position:relative; display:inline-flex; align-items:center; justify-content:center;
-      width:36px; height:36px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer;
-    }
+    .kebab{ position:relative; display:inline-flex; align-items:center; justify-content:center;
+      width:36px; height:36px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; }
     .kebab:hover{ background:#f8fafc }
     .kebab svg{ width:18px; height:18px }
     .kebab-menu{
@@ -103,10 +94,10 @@
 
     .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
           word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
-          display:flex; align-items:flex-start; gap:10px }
-    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); position:relative } /* UPDATED: để gắn status chip */
+          display:flex; align-items:flex-start; gap:10px; position:relative }
+    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
-    .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
+    .avatar{ width:28px; height:28px; border-radius:6px; flex-shrink:0; object-fit:cover; border:1px solid var(--bubble-border); background:#fff }
     .content a{ color:#0ea5e9; text-decoration:underline }
     .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
     .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
@@ -114,12 +105,20 @@
     .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
-    /* UPDATED: status “Thinking…/Thought” là chữ mờ nằm trên avatar của cùng 1 bubble */
+    /* UPDATED: Status “Thinking…/Thought” (to hơn + nhấp nháy giống ChatGPT) đặt trên cùng icon AI */
     .status-chip{
-      position:absolute; left:42px; top:-10px;  /* ngay phía trên đầu avatar (28px + margin) */
-      font-size:12px; color:var(--muted); user-select:none; pointer-events:none;
-      animation:fadeIn .18s ease;
+      position:absolute; left:42px; top:-12px; 
+      font-size:13px; color:var(--muted); user-select:none; pointer-events:none;
+      display:inline-flex; gap:6px; align-items:center;
     }
+    .dots { display:inline-flex; gap:4px; }
+    .dot  { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.35; }
+    .dot:nth-child(1){ animation:blink 1s .0s infinite ease-in-out }
+    .dot:nth-child(2){ animation:blink 1s .2s infinite ease-in-out }
+    .dot:nth-child(3){ animation:blink 1s .4s infinite ease-in-out }
+    @keyframes blink{ 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+    .pulse { animation:pulse 1.2s ease-in-out infinite }
+    @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
 
     @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
 
@@ -129,21 +128,30 @@
       border-top:1px solid var(--bubble-border); background:#fff;
       padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));
     }
-    .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative } /* UPDATED: relative để đặt nút gửi trong ô nhập */
+    .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative }
     #prompt{
-      /* UPDATED: chừa chỗ cho nút gửi tròn trong ô */
-      flex:1; padding:12px 56px 12px 12px;
+      /* UPDATED: chừa chỗ cho nút gửi tròn 44px trong ô */
+      flex:1; padding:12px 64px 12px 12px;
       border:1px solid var(--bubble-border); border-radius:12px;
       outline:none; font-size:16px;
-      resize:none; overflow-y:hidden; line-height:1.5; min-height:44px; max-height:40vh;
+      resize:none; overflow-y:hidden; line-height:1.5; min-height:48px; max-height:40vh;
+      background:#fff;
     }
     #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
 
-    /* Nút gửi theo thiết kế gốc (giữ DOM nhưng ẩn) */
-    button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
-    #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
-    button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
-    .typing{ font-style:italic; color:var(--muted) }
+    /* Giữ DOM nút Send cũ (ẩn để không phá bind khác nếu có) */
+    #sendBtn{ display:none !important; }
+
+    /* UPDATED: nút gửi tròn trong ô nhập – giống ChatGPT */
+    .inbox-send{
+      position:absolute; right:12px; bottom:10px; width:44px; height:44px;
+      border-radius:999px; background:#000; color:#fff; border:1px solid #000;
+      display:none; align-items:center; justify-content:center; cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,.10);
+    }
+    .inbox-send.show{ display:inline-flex }
+    .inbox-send:disabled{ opacity:.5; cursor:not-allowed }
+    .inbox-send svg{ width:22px; height:22px; display:block } /* UPDATED: mũi tên to hơn, rõ nét */
 
     #scrollBtn{
       position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
@@ -156,20 +164,6 @@
     }
     #scrollBtn svg{ width:22px; height:22px; display:block }
     #scrollBtn.show{ opacity:1; visibility:visible }
-
-    /* UPDATED: nút gửi tròn viền đen + mũi tên trắng bên trong ô (giống ChatGPT) */
-    .inbox-send{
-      position:absolute; right:12px; bottom:12px; width:40px; height:40px;
-      border-radius:999px; background:#000; color:#fff; border:1px solid #000;
-      display:none; align-items:center; justify-content:center; cursor:pointer;
-      box-shadow:0 2px 8px rgba(0,0,0,.10);
-    }
-    .inbox-send.show{ display:inline-flex }
-    .inbox-send svg{ width:20px; height:20px; display:block }
-    .inbox-send:disabled{ opacity:.5; cursor:not-allowed }
-
-    /* UPDATED: Ẩn nút Send cũ nhưng vẫn giữ nguyên DOM để không phá logic khác */
-    #sendBtn{ display:none !important; }
 
     body.kbd-open{ overflow:hidden }
     @media (max-width:600px){
@@ -198,8 +192,7 @@
       <p>I am the AI Agent of PPS, here to support you 24/7</p>
     </div>
     <div class="controls">
-      <!-- UPDATED: Kebab 3 chấm + menu Sign out -->
-      <div class="kebab" id="kebabBtn" aria-label="More"> <!-- UPDATED -->
+      <div class="kebab" id="kebabBtn" aria-label="More">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <circle cx="6" cy="12" r="2"></circle>
           <circle cx="12" cy="12" r="2"></circle>
@@ -209,27 +202,29 @@
           <button class="kebab-item" id="kebabSignOut">Sign out</button>
         </div>
       </div>
-      <!-- Giữ nguyên nút signout gốc nhưng ẩn (để không phá các bind khác nếu có) -->
-      <button class="signout hidden" id="signoutBtn">Sign out</button> <!-- UPDATED: hidden -->
+      <button class="signout hidden" id="signoutBtn">Sign out</button>
     </div>
   </header>
+
   <div id="chat"></div>
+
   <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
+
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <!-- UPDATED: nút gửi tròn trong ô nhập -->
+      <!-- UPDATED: nút gửi tròn trong ô nhập (đẹp & cân đối) -->
       <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 19V6"></path>
           <path d="M5 13l7-7 7 7"></path>
         </svg>
       </button>
-      <button id="sendBtn">Send</button> <!-- giữ nguyên DOM, đã ẩn bằng CSS -->
+      <button id="sendBtn">Send</button> <!-- giữ DOM, ẩn bằng CSS -->
     </div>
   </footer>
 </div>
@@ -267,7 +262,7 @@
 </script>
 
 <script>
-/* Login (không còn toggle streaming) */
+/* Login */
 const AUTO_LOGOUT_MS=30*60*1000;let inactivityTimer;
 const accessEl=document.getElementById('accessInput');
 const loginBtn=document.getElementById('loginBtn');
@@ -276,10 +271,9 @@ const chatBox=document.getElementById('chatUI');
 const loginMsg=document.getElementById('loginMsg');
 const signoutBtn=document.getElementById('signoutBtn');
 
-/* UPDATED: Kebab events */
-const kebabBtn=document.getElementById('kebabBtn');     /* UPDATED */
-const kebabMenu=document.getElementById('kebabMenu');   /* UPDATED */
-const kebabSignOut=document.getElementById('kebabSignOut'); /* UPDATED */
+const kebabBtn=document.getElementById('kebabBtn');
+const kebabMenu=document.getElementById('kebabMenu');
+const kebabSignOut=document.getElementById('kebabSignOut');
 
 function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
 function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
@@ -304,14 +298,13 @@ async function signOut(){
 signoutBtn.addEventListener('click',signOut);
 (async()=>{const r=await fetch("/api/session").catch(()=>null);if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}})();
 
-/* UPDATED: Kebab open/close + action */
 kebabBtn?.addEventListener('click', (e)=>{ e.stopPropagation(); kebabMenu.classList.toggle('show'); });
 document.addEventListener('click', (e)=>{ if(!kebabBtn.contains(e.target)) kebabMenu.classList.remove('show'); });
 kebabSignOut?.addEventListener('click', ()=>{ kebabMenu.classList.remove('show'); signOut(); });
 </script>
 
 <script>
-/* Chat logic (mặc định STREAMING, có fallback non-stream) */
+/* Chat + Streaming vững chắc (UTF-8, SSE/NDJSON, throttle re-render, không rơi dấu) */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -337,18 +330,18 @@ function saveMessages(arr){
 }
 let messages=loadMessages();renderHistory(messages);
 
-/* UPDATED: Nút gửi tròn trong ô nhập (chỉ hiện khi có nội dung) */
-const inboxSend=document.getElementById('inboxSend'); /* UPDATED */
-function toggleInboxSend(){ /* UPDATED */
+/* Nút gửi tròn trong ô nhập (chỉ hiện khi có nội dung) */
+const inboxSend=document.getElementById('inboxSend');
+function toggleInboxSend(){
   const hasText=!!inputEl.value.trim();
   inboxSend.classList.toggle('show', hasText);
   inboxSend.disabled=!hasText;
 }
-inputEl.addEventListener('input', toggleInboxSend); /* UPDATED */
-toggleInboxSend(); /* UPDATED */
+inputEl.addEventListener('input', toggleInboxSend);
+toggleInboxSend();
 
-btnEl.addEventListener('click',onSend); // Giữ binding cũ (nút đã ẩn)
-inboxSend.addEventListener('click',onSend); // UPDATED: gửi bằng nút tròn trong ô
+btnEl.addEventListener('click',onSend);     // giữ bind cũ (ẩn)
+inboxSend.addEventListener('click',onSend); // nút tròn trong ô
 
 /* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
 inputEl.addEventListener('keydown',e=>{
@@ -381,8 +374,8 @@ function renderMarkdown(md){
   return DOMPurify.sanitize(html);
 }
 
-/* UPDATED: helper status chip (Thinking.../Thought) hiển thị trên cùng 1 icon AI */
-function setStatusChip(targetNode, text){ /* UPDATED */
+/* Status chip trên cùng icon AI: “Thinking…” / “Thought” (to + nhấp nháy) */
+function setStatusChip(targetNode, typeOrText){
   if(!targetNode) return;
   let chip=targetNode.querySelector('.status-chip');
   if(!chip){
@@ -390,7 +383,13 @@ function setStatusChip(targetNode, text){ /* UPDATED */
     chip.className='status-chip';
     targetNode.appendChild(chip);
   }
-  chip.textContent=text||'';
+  if(typeOrText==='thinking'){
+    chip.innerHTML = `<span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span><span>Thinking…</span>`;
+  }else if(typeOrText==='thought'){
+    chip.innerHTML = `<span class="pulse">Thought</span>`;
+  }else{
+    chip.textContent='';
+  }
 }
 
 /* appendBubble trả về node để stream có thể cập nhật trực tiếp */
@@ -399,14 +398,11 @@ function appendBubble(text,role='assistant',imageUrl=null){
   d.className='msg '+(role==='user'?'user':'assistant');
 
   if(role==='assistant'){
-    /* Assistant icon: dùng SVG inline để không phụ thuộc file ngoài */
-    const av=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    av.setAttribute('viewBox','0 0 24 24'); av.setAttribute('width','28'); av.setAttribute('height','28');
-    av.classList.add('avatar');
-    av.innerHTML='<circle cx="12" cy="8" r="4" fill="#0ea5e9"></circle><rect x="5" y="14" width="14" height="6" rx="3" fill="#0ea5e9"></rect>';
+    const av=document.createElement('img'); 
+    av.src="assistant_icon.png"; /* ✅ Giữ nguyên icon từ file PNG như yêu cầu */
+    av.alt="Assistant"; av.className="avatar";
+    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
     d.appendChild(av);
-
-    /* UPDATED: khởi tạo status chip trong bubble assistant */
     const chip=document.createElement('div'); chip.className='status-chip'; chip.textContent='';
     d.appendChild(chip);
   }
@@ -435,11 +431,11 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* UPDATED: STREAMING/Non-stream robust để tránh double/lộn xộn và show đúng khi tắt stream */
+/* Robust streaming (SSE/NDJSON/Plain) — không rơi dấu, không thiếu chữ, re-render throttle 50ms */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
-    'Accept':'text/event-stream, application/x-ndjson, application/json, text/plain' /* UPDATED */
+    'Accept':'text/event-stream, application/x-ndjson, application/json, text/plain; charset=utf-8'
   };
   const body=JSON.stringify({sessionId,chatInput:message});
   const attempts=[
@@ -448,11 +444,11 @@ async function streamFromWebhook(sessionId,message,targetNode){
   ];
   let res=null;
   for(const a of attempts){
-    try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
+    try{const r=await fetch(a.url,{method:a.method,headers,body}); if(r.ok){res=r;break;}}catch{}
   }
   if(!res){
-    const {content,image_url}=await sendToWebhook(sessionId,message); /* tắt stream → về non-stream */
-    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought'); /* UPDATED */
+    const {content,image_url}=await sendToWebhook(sessionId,message); // fallback non-stream
+    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'thought');
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     if(image_url){
       const w=document.createElement('div');w.className='content';
@@ -463,102 +459,109 @@ async function streamFromWebhook(sessionId,message,targetNode){
   }
 
   const ct=(res.headers.get('content-type')||'').toLowerCase();
+  const isSSE = /event-stream/.test(ct);
+  const isNDJ = /ndjson|octet-stream|text\/plain/.test(ct) && !isSSE;
 
-  /* Helper NDJSON/JSON-per-line (tắt streaming hoặc text/plain) — KHÔNG lọc theo nội dung, chỉ theo timestamp */
-  function parseNdjsonText(text){
-    const rawLines=text.split(/\r?\n/);
-    let parts=[]; const seenTs=new Set();
-    for(let raw of rawLines){
-      if(!raw) continue;
-      let line=raw.replace(/^\s*data:\s?/,'');
-      if(line.startsWith('{')||line.startsWith('[')){
-        try{
-          const obj=JSON.parse(line);
-          const ts=obj?.metadata?.timestamp;
-          if(ts!=null){ if(seenTs.has(ts)) continue; seenTs.add(ts); }
-          let added='';
-          if(obj?.type==='item'&&typeof obj?.content==='string') added=obj.content;
-          else if(typeof obj?.delta==='string') added=obj.delta;
-          else if(typeof obj?.content==='string') added=obj.content;
-          else if(typeof obj?.output==='string') added=obj.output;  /* UPDATED: hỗ trợ non-stream */
-          if(added){ parts.push(added); }
-          continue;
-        }catch{/* fall-through */}
-      }
-      parts.push(line);
-    }
-    return parts.join('');
+  // Throttle re-render (50ms)
+  let acc=''; let needsRender=false; 
+  const contentEl = targetNode.querySelector('.content');
+  function scheduleRender(){
+    if(needsRender) return;
+    needsRender=true;
+    setTimeout(()=>{ 
+      contentEl.innerHTML = renderMarkdown(acc);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      needsRender=false;
+    }, 50);
   }
 
-  /* Non-stream (server không trả SSE) */
-  if(!/event-stream|ndjson/.test(ct)){
+  // Khi có nội dung đầu tiên → chuyển sang Thought
+  let started=false; const markStarted=()=>{ if(!started){ setStatusChip(targetNode,'thought'); started=true; } };
+
+  // --- Non-stream body but text/ndjson ---
+  if(!isSSE){
     const text=await res.text();
-    const trimmed=text.trim();
-    if(trimmed.startsWith('{')&&trimmed.endsWith('}')){
-      try{
-        const obj=JSON.parse(trimmed);
-        const content=(typeof obj.content==='string')?obj.content:(typeof obj.output==='string')?obj.output:'';
-        if(content){
-          if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought'); /* UPDATED */
-          targetNode.querySelector('.content').innerHTML=renderMarkdown(content);
-          chatEl.scrollTop=chatEl.scrollHeight;
-          return content;
-        }
-      }catch{/* ignore */}
-    }
-    const final=parseNdjsonText(text);
-    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought'); /* UPDATED */
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(final||'(không có nội dung)');
-    chatEl.scrollTop=chatEl.scrollHeight;
-    return final||'';
+    const final = parseStreamLikeText(text);
+    markStarted(); acc += final;
+    scheduleRender();
+    return acc;
   }
 
-  /* STREAM thực sự (SSE) — không lặp nội dung, chỉ skip theo timestamp */
-  const reader=res.body.getReader();const decoder=new TextDecoder();
-  let buffer='';let acc=''; let started=false;
-  const seenTs=new Set();
+  // --- SSE streaming thật sự ---
+  const reader=res.body.getReader();
+  const decoder=new TextDecoder('utf-8'); // ✅ đảm bảo UTF-8
+  let buffer='';
 
   while(true){
     const {done,value}=await reader.read();
-    if(value) buffer+=decoder.decode(value,{stream:!done});
+    if(value){ buffer += decoder.decode(value,{stream:!done}); }
 
-    let idx,start=0;
-    while((idx=buffer.indexOf('\n',start))>=0){
-      let raw=buffer.slice(start,idx); start=idx+1;
-      let line=raw.replace(/^\s*data:\s?/,'');
+    // Tách theo dòng SSE chuẩn (không trim để giữ dấu)
+    let pos=0, nl=0;
+    while((nl = buffer.indexOf('\n', pos)) !== -1){
+      const rawLine = buffer.slice(pos, nl);
+      pos = nl + 1;
+
+      // SSE chỉ quan tâm dòng bắt đầu bằng `data:` (chấp nhận có space)
+      let line = rawLine.replace(/^\s*data:\s?/, '');
       if(!line) continue;
 
-      if(line.startsWith('{')||line.startsWith('[')){
+      // JSON chunk
+      if(line[0]==='{' || line[0]==='['){
         try{
           const obj=JSON.parse(line);
-          if(obj?.type==='end'){ /* ignore end marker */ }
-
-          const ts=obj?.metadata?.timestamp;
-          if(ts!=null){ if(seenTs.has(ts)) continue; seenTs.add(ts); }
-
           let chunk='';
-          if(obj?.type==='item'&&typeof obj?.content==='string') chunk=obj.content;
-          else if(typeof obj?.delta==='string') chunk=obj.delta;
-          else if(typeof obj?.content==='string') chunk=obj.content;
-
+          if(typeof obj.delta==='string') chunk = obj.delta;
+          else if(typeof obj.content==='string') chunk = obj.content;
+          else if(obj.type==='item' && typeof obj.content==='string') chunk = obj.content;
+          else if(typeof obj.output==='string') chunk = obj.output;
           if(chunk){
-            if(!started){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED */
-            acc+=chunk;
-            targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
-            chatEl.scrollTop=chatEl.scrollHeight;
+            markStarted();
+            acc += chunk;              // ✅ chỉ cộng thêm, không cắt dấu
+            scheduleRender();
           }
-        }catch{
-          // bỏ qua non-JSON để tránh rác trong stream
-        }
+          continue;
+        }catch{ /* nếu không phải JSON, rơi xuống text thường */ }
       }
+
+      // Text thường
+      markStarted();
+      acc += line + '\n';
+      scheduleRender();
     }
-    buffer=buffer.slice(start);
+    buffer = buffer.slice(pos);
     if(done) break;
   }
   return acc;
+
+  // ---- helpers ----
+  function parseStreamLikeText(text){
+    // Hỗ trợ NDJSON hoặc text/plain trả về nhiều dòng "data: ..."
+    const lines = text.split(/\r?\n/);
+    let out = '';
+    for(const raw of lines){
+      if(!raw) continue;
+      let line = raw.replace(/^\s*data:\s?/, '');
+      if(!line) continue;
+
+      if(line[0]==='{' || line[0]==='['){
+        try{
+          const obj=JSON.parse(line);
+          let chunk='';
+          if(typeof obj.delta==='string') chunk=obj.delta;
+          else if(typeof obj.content==='string') chunk=obj.content;
+          else if(obj.type==='item'&&typeof obj.content==='string') chunk=obj.content;
+          else if(typeof obj.output==='string') chunk=obj.output;
+          if(chunk){ out += chunk; continue; }
+        }catch{}
+      }
+      out += line + '\n';
+    }
+    return out;
+  }
 }
 
-/* Mặc định dùng streaming; nếu lỗi sẽ fallback sang non-stream */
+/* Gửi */
 async function onSend(){
   const text=inputEl.value.trim(); if(!text) return;
 
@@ -566,36 +569,34 @@ async function onSend(){
   messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
 
   inputEl.value=''; autosizeTextarea(inputEl);
-  toggleInboxSend(); /* UPDATED */
+  toggleInboxSend();
 
-  const node=appendBubble('','assistant'); // placeholder để stream vào
-  setStatusChip(node,'Thinking...'); /* UPDATED: show Thinking... trên icon cùng bubble */
+  const node=appendBubble('','assistant'); // placeholder
+  setStatusChip(node,'thinking'); // ✅ Thinking… to + chấm nhấp nháy
 
   try{
     const finalText=await streamFromWebhook(sessionId,text,node);
     messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
     saveMessages(messages);
   }catch(err){
-    const msg=`Error (stream): ${err}`;
+    const msg=`Error (stream): ${String(err)}`;
     node.querySelector('.content').innerHTML=renderMarkdown(msg);
     messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
     saveMessages(messages);
   }finally{
-    /* UPDATED: ẩn status sau khi hoàn tất một nhịp ngắn (giống ChatGPT) */
+    // Ẩn status sau khi hoàn tất (đợi 800ms giống ChatGPT)
     setTimeout(()=>setStatusChip(node,''), 800);
   }
 }
 
-/* NON-STREAM fallback: chịu được JSON hoặc NDJSON/text trả về */
+/* NON-STREAM fallback (JSON/NDJSON/text) */
 async function sendToWebhook(sessionId,message){
-  const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson'};
+  const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson; charset=utf-8'};
   const res=await fetch("/api/chat",{method:'POST',headers,body:JSON.stringify({sessionId,chatInput:message})});
-  const statusErr = async () => {
+  if(!res.ok){
     const t=await res.text().catch(()=> '');
     throw new Error(`${res.status} ${t.slice(0,200)}`);
-  };
-  if(!res.ok) return statusErr();
-
+  }
   const ct=(res.headers.get('content-type')||'').toLowerCase();
 
   if(ct.includes('application/json')){
@@ -605,35 +606,36 @@ async function sendToWebhook(sessionId,message){
       if(Array.isArray(data)){const f=data[0]||{};content=f.content||f.output;image_url=f.url;}
       else{content=data.content||data.output;image_url=data.url;}
       return {content,image_url};
-    }catch(e){}
+    }catch(e){ /* nếu lỗi JSON, rơi xuống text */ }
   }
 
   const text=await res.text();
-  const lines=text.split(/\r?\n/); /* KHÔNG trim để giữ dấu/spacing */
+  // Tái sử dụng parser ở trên để gom nội dung, tránh mất dấu/khoảng trắng
+  const lines=text.split(/\r?\n/);
   let acc='', image_url=null;
   for(const raw of lines){
     let line=raw.replace(/^\s*data:\s?/,'');
     if(!line) continue;
-
-    if(line.startsWith('{')||line.startsWith('[')){
+    if(line[0]==='{'||line[0]==='['){
       try{
         const obj=JSON.parse(line);
         if(obj){
           if(typeof obj.content==='string') acc+=obj.content;
           else if(typeof obj.delta==='string') acc+=obj.delta;
           else if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
-          else if(typeof obj.output==='string') acc+=obj.output; /* UPDATED */
+          else if(typeof obj.output==='string') acc+=obj.output;
           if(obj.url && !image_url) image_url=obj.url;
         }
         continue;
       }catch{}
     }
-    acc += line;
+    acc += line + '\n';
   }
   if(!acc) acc = text;
   return {content:acc, image_url};
 }
 
+/* Scroll-to-bottom button */
 (function(){
   const chatBox=document.getElementById('chat');
   const scrollBtn=document.getElementById('scrollBtn');
