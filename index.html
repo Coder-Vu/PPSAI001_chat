@@ -97,7 +97,7 @@
           display:flex; align-items:flex-start; gap:10px; position:relative }
     .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
-    .avatar{ width:28px; height:28px; border-radius:6px; flex-shrink:0; object-fit:cover; border:none;  background:transparent }
+    .avatar{ width:28px; height:28px; border-radius:6px; flex-shrink:0; object-fit:cover; border:none;  background:transparent; }
     .content a{ color:#0ea5e9; text-decoration:underline }
     .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
     .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
@@ -144,7 +144,7 @@
 
     /* UPDATED: nút gửi tròn trong ô nhập – giống ChatGPT */
     .inbox-send{
-      position:absolute; right:12px; bottom:10px; width:44px; height:44px;
+      position:absolute; right:12px; top:50%; transform:translateY(-50%); width:44px; height:44px;
       border-radius:999px; background:#000; color:#fff; border:1px solid #000;
       display:none; align-items:center; justify-content:center; cursor:pointer;
       box-shadow:0 2px 8px rgba(0,0,0,.10);
