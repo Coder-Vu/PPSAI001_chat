@@ -118,6 +118,7 @@
     .status-chip{
       position:absolute; left:42px; top:-10px;  /* ngay phía trên đầu avatar (28px + margin) */
       font-size:12px; color:var(--muted); user-select:none; pointer-events:none;
+      animation:fadeIn .18s ease;
     }
 
     @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
@@ -138,6 +139,7 @@
     }
     #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
 
+    /* Nút gửi theo thiết kế gốc (giữ DOM nhưng ẩn) */
     button{ padding:12px 16px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px }
     #sendBtn{ font-size:14px; height:44px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto }
     button:hover{ background:var(--brand-2); border-color:var(--brand-2) }
@@ -397,8 +399,11 @@ function appendBubble(text,role='assistant',imageUrl=null){
   d.className='msg '+(role==='user'?'user':'assistant');
 
   if(role==='assistant'){
-    const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
-    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
+    /* Assistant icon: dùng SVG inline để không phụ thuộc file ngoài */
+    const av=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    av.setAttribute('viewBox','0 0 24 24'); av.setAttribute('width','28'); av.setAttribute('height','28');
+    av.classList.add('avatar');
+    av.innerHTML='<circle cx="12" cy="8" r="4" fill="#0ea5e9"></circle><rect x="5" y="14" width="14" height="6" rx="3" fill="#0ea5e9"></rect>';
     d.appendChild(av);
 
     /* UPDATED: khởi tạo status chip trong bubble assistant */
