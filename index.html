@@ -107,7 +107,7 @@
 
     /* UPDATED: Status “Thinking…/Thought” (to hơn + nhấp nháy giống ChatGPT) đặt trên cùng icon AI */
     .status-chip{
-      position:absolute; left:42px; top:-12px; 
+      position:absolute; left:42px; top:-12px;
       font-size:13px; color:var(--muted); user-select:none; pointer-events:none;
       display:inline-flex; gap:6px; align-items:center;
     }
@@ -304,7 +304,7 @@ kebabSignOut?.addEventListener('click', ()=>{ kebabMenu.classList.remove('show')
 </script>
 
 <script>
-/* Chat + Streaming vững chắc (UTF-8, SSE/NDJSON, throttle re-render, không rơi dấu) */
+/* Chat + Streaming vững (UTF-8, luôn đọc stream nếu có res.body, SSE/NDJSON, throttle 33ms) */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -399,7 +399,7 @@ function appendBubble(text,role='assistant',imageUrl=null){
 
   if(role==='assistant'){
     const av=document.createElement('img'); 
-    av.src="assistant_icon.png"; /* ✅ Giữ nguyên icon từ file PNG như yêu cầu */
+    av.src="assistant_icon.png"; /* giữ nguyên icon PNG như yêu cầu */
     av.alt="Assistant"; av.className="avatar";
     av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
     d.appendChild(av);
@@ -431,23 +431,25 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* Robust streaming (SSE/NDJSON/Plain) — không rơi dấu, không thiếu chữ, re-render throttle 50ms */
+/* ========== STREAMING CORE (đã fix) ========== */
+/* FIX: Luôn đọc stream nếu có res.body; parser bỏ qua begin/end; render dần (33ms) */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
     'Accept':'text/event-stream, application/x-ndjson, application/json, text/plain; charset=utf-8'
   };
   const body=JSON.stringify({sessionId,chatInput:message});
-  const attempts=[
+  const tries=[
     {url:'/api/chat?stream=1',method:'POST'},
     {url:'/api/chat/stream',method:'POST'},
   ];
   let res=null;
-  for(const a of attempts){
-    try{const r=await fetch(a.url,{method:a.method,headers,body}); if(r.ok){res=r;break;}}catch{}
+  for(const t of tries){
+    try{const r=await fetch(t.url,{method:t.method,headers,body}); if(r.ok){res=r;break;}}catch{}
   }
   if(!res){
-    const {content,image_url}=await sendToWebhook(sessionId,message); // fallback non-stream
+    // Fallback non-stream (một lần)
+    const {content,image_url}=await sendToWebhook(sessionId,message);
     if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'thought');
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     if(image_url){
@@ -458,106 +460,105 @@ async function streamFromWebhook(sessionId,message,targetNode){
     return content||'';
   }
 
-  const ct=(res.headers.get('content-type')||'').toLowerCase();
-  const isSSE = /event-stream/.test(ct);
-  const isNDJ = /ndjson|octet-stream|text\/plain/.test(ct) && !isSSE;
+  // ---- ĐỌC STREAM (không phụ thuộc content-type) ----
+  if(!res.body){
+    // Một số môi trường không expose stream → đọc text thường
+    const text=await res.text();
+    return renderStreamLikeText(text, targetNode, true);
+  }
 
-  // Throttle re-render (50ms)
-  let acc=''; let needsRender=false; 
+  const reader=res.body.getReader();
+  const decoder=new TextDecoder('utf-8'); // đảm bảo UTF-8 tiếng Việt
+  let buffer=''; let acc=''; let started=false;
+
+  // throttle render 33ms
+  let needs=false;
   const contentEl = targetNode.querySelector('.content');
-  function scheduleRender(){
-    if(needsRender) return;
-    needsRender=true;
-    setTimeout(()=>{ 
+  const schedule=()=>{
+    if(needs) return;
+    needs=true; setTimeout(()=>{
       contentEl.innerHTML = renderMarkdown(acc);
       chatEl.scrollTop = chatEl.scrollHeight;
-      needsRender=false;
-    }, 50);
-  }
+      needs=false;
+    },33);
+  };
 
-  // Khi có nội dung đầu tiên → chuyển sang Thought
-  let started=false; const markStarted=()=>{ if(!started){ setStatusChip(targetNode,'thought'); started=true; } };
-
-  // --- Non-stream body but text/ndjson ---
-  if(!isSSE){
-    const text=await res.text();
-    const final = parseStreamLikeText(text);
-    markStarted(); acc += final;
-    scheduleRender();
-    return acc;
-  }
-
-  // --- SSE streaming thật sự ---
-  const reader=res.body.getReader();
-  const decoder=new TextDecoder('utf-8'); // ✅ đảm bảo UTF-8
-  let buffer='';
+  setStatusChip(targetNode,'thinking');
 
   while(true){
     const {done,value}=await reader.read();
     if(value){ buffer += decoder.decode(value,{stream:!done}); }
 
-    // Tách theo dòng SSE chuẩn (không trim để giữ dấu)
-    let pos=0, nl=0;
+    // Xử lý theo sự kiện SSE: chia theo newline, giữ nguyên thứ tự
+    let pos=0, nl;
     while((nl = buffer.indexOf('\n', pos)) !== -1){
-      const rawLine = buffer.slice(pos, nl);
+      const raw = buffer.slice(pos, nl);
       pos = nl + 1;
 
-      // SSE chỉ quan tâm dòng bắt đầu bằng `data:` (chấp nhận có space)
-      let line = rawLine.replace(/^\s*data:\s?/, '');
+      let line = raw;
       if(!line) continue;
 
-      // JSON chunk
+      // Chỉ quan tâm phần sau "data:"
+      if(/^\s*data\s*:/.test(line)) line = line.replace(/^\s*data\s*:\s?/, '');
+
+      // Thử JSON trước
       if(line[0]==='{' || line[0]==='['){
         try{
-          const obj=JSON.parse(line);
-          let chunk='';
-          if(typeof obj.delta==='string') chunk = obj.delta;
-          else if(typeof obj.content==='string') chunk = obj.content;
-          else if(obj.type==='item' && typeof obj.content==='string') chunk = obj.content;
-          else if(typeof obj.output==='string') chunk = obj.output;
-          if(chunk){
-            markStarted();
-            acc += chunk;              // ✅ chỉ cộng thêm, không cắt dấu
-            scheduleRender();
+          const obj = JSON.parse(line);
+
+          // FIX: bỏ qua begin/end của n8n
+          if(obj.type === 'begin' || obj.type === 'end') { /* skip */ }
+          else{
+            const chunk = pickContent(obj);
+            if(chunk){
+              if(!started){ setStatusChip(targetNode,'thought'); started=true; }
+              acc += chunk;
+              schedule();
+            }
           }
           continue;
-        }catch{ /* nếu không phải JSON, rơi xuống text thường */ }
+        }catch{
+          // không phải JSON → coi là text thường
+        }
       }
 
-      // Text thường
-      markStarted();
-      acc += line + '\n';
-      scheduleRender();
+      // Text thường (VD n8n push plain text)
+      if(line.trim()){
+        if(!started){ setStatusChip(targetNode,'thought'); started=true; }
+        acc += line + '\n';
+        schedule();
+      }
     }
     buffer = buffer.slice(pos);
     if(done) break;
   }
+  // flush phần còn lại trong buffer (nếu có)
+  if(buffer.trim()){
+    let line = buffer.replace(/^\s*data\s*:\s?/, '');
+    try{
+      const obj=JSON.parse(line);
+      if(obj.type!=='begin' && obj.type!=='end'){
+        const chunk=pickContent(obj);
+        if(chunk){ acc+=chunk; }
+      }
+    }catch{ acc+=line+'\n'; }
+    contentEl.innerHTML = renderMarkdown(acc);
+  }
+
+  // tắt chip sau 800ms như ChatGPT
+  setTimeout(()=>setStatusChip(targetNode,''),800);
   return acc;
 
   // ---- helpers ----
-  function parseStreamLikeText(text){
-    // Hỗ trợ NDJSON hoặc text/plain trả về nhiều dòng "data: ..."
-    const lines = text.split(/\r?\n/);
-    let out = '';
-    for(const raw of lines){
-      if(!raw) continue;
-      let line = raw.replace(/^\s*data:\s?/, '');
-      if(!line) continue;
-
-      if(line[0]==='{' || line[0]==='['){
-        try{
-          const obj=JSON.parse(line);
-          let chunk='';
-          if(typeof obj.delta==='string') chunk=obj.delta;
-          else if(typeof obj.content==='string') chunk=obj.content;
-          else if(obj.type==='item'&&typeof obj.content==='string') chunk=obj.content;
-          else if(typeof obj.output==='string') chunk=obj.output;
-          if(chunk){ out += chunk; continue; }
-        }catch{}
-      }
-      out += line + '\n';
-    }
-    return out;
+  function pickContent(obj){
+    // Ưu tiên delta → content → output → item.content → data.text → text
+    if(typeof obj.delta === 'string') return obj.delta;
+    if(typeof obj.content === 'string') return obj.content;
+    if(typeof obj.output  === 'string') return obj.output;
+    if(obj.item && typeof obj.item.content === 'string') return obj.item.content;
+    if(obj.data && typeof obj.data.text === 'string') return obj.data.text;
+    if(typeof obj.text === 'string') return obj.text;
+    return '';
   }
 }
 
@@ -572,7 +573,7 @@ async function onSend(){
   toggleInboxSend();
 
   const node=appendBubble('','assistant'); // placeholder
-  setStatusChip(node,'thinking'); // ✅ Thinking… to + chấm nhấp nháy
+  setStatusChip(node,'thinking');
 
   try{
     const finalText=await streamFromWebhook(sessionId,text,node);
@@ -584,12 +585,12 @@ async function onSend(){
     messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
     saveMessages(messages);
   }finally{
-    // Ẩn status sau khi hoàn tất (đợi 800ms giống ChatGPT)
+    // nếu parser đã tắt chip thì thôi; nếu chưa, tắt sau 800ms
     setTimeout(()=>setStatusChip(node,''), 800);
   }
 }
 
-/* NON-STREAM fallback (JSON/NDJSON/text) */
+/* NON-STREAM fallback (đọc một lần, vẫn gom bỏ begin/end nếu có) */
 async function sendToWebhook(sessionId,message){
   const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson; charset=utf-8'};
   const res=await fetch("/api/chat",{method:'POST',headers,body:JSON.stringify({sessionId,chatInput:message})});
@@ -606,33 +607,47 @@ async function sendToWebhook(sessionId,message){
       if(Array.isArray(data)){const f=data[0]||{};content=f.content||f.output;image_url=f.url;}
       else{content=data.content||data.output;image_url=data.url;}
       return {content,image_url};
-    }catch(e){ /* nếu lỗi JSON, rơi xuống text */ }
+    }catch{ /* rơi xuống text */ }
   }
 
   const text=await res.text();
-  // Tái sử dụng parser ở trên để gom nội dung, tránh mất dấu/khoảng trắng
+  const content = renderStreamLikeText(text, null, false);
+  return {content, image_url:null};
+}
+
+/* FIX: Gom NDJSON/text, BỎ begin/end, ưu tiên các field nội dung */
+function renderStreamLikeText(text, targetNode=null, markThought=false){
   const lines=text.split(/\r?\n/);
-  let acc='', image_url=null;
+  let acc='';
   for(const raw of lines){
-    let line=raw.replace(/^\s*data:\s?/,'');
+    if(!raw) continue;
+    let line = raw.replace(/^\s*data\s*:\s?/, '');
     if(!line) continue;
-    if(line[0]==='{'||line[0]==='['){
+
+    if(line[0]==='{' || line[0]==='['){
       try{
         const obj=JSON.parse(line);
-        if(obj){
-          if(typeof obj.content==='string') acc+=obj.content;
-          else if(typeof obj.delta==='string') acc+=obj.delta;
-          else if(obj.type==='item'&&typeof obj.content==='string') acc+=obj.content;
-          else if(typeof obj.output==='string') acc+=obj.output;
-          if(obj.url && !image_url) image_url=obj.url;
-        }
+        if(obj.type==='begin' || obj.type==='end') continue; /* FIX */
+        const chunk = (typeof obj.delta==='string' && obj.delta)
+                   || (typeof obj.content==='string' && obj.content)
+                   || (typeof obj.output==='string' && obj.output)
+                   || (obj.item && typeof obj.item.content==='string' && obj.item.content)
+                   || (obj.data && typeof obj.data.text==='string' && obj.data.text)
+                   || (typeof obj.text==='string' && obj.text)
+                   || '';
+        if(chunk) acc+=chunk;
         continue;
-      }catch{}
+      }catch{
+        // fall back text
+      }
     }
     acc += line + '\n';
   }
-  if(!acc) acc = text;
-  return {content:acc, image_url};
+  if(markThought && targetNode){
+    setStatusChip(targetNode,'thought');
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+  }
+  return acc;
 }
 
 /* Scroll-to-bottom button */
