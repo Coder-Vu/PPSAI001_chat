@@ -72,8 +72,8 @@
     }
     header button.signout:hover{background:var(--brand-2); border-color:var(--brand-2)}
 
-    /* UPDATED: Kebab menu (3 chấm) ở header giống ChatGPT */
-    .kebab{
+    /* UPDATED: Kebab menu 3 chấm giống ChatGPT */
+    .kebab{ /* nút 3 chấm */
       position:relative; display:inline-flex; align-items:center; justify-content:center;
       width:36px; height:36px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer;
     }
@@ -103,8 +103,8 @@
 
     .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
           word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
-          display:flex; align-items:flex-start; gap:10px; position:relative } /* UPDATED: relative để gắn status-chip */
-    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
+          display:flex; align-items:flex-start; gap:10px }
+    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot); position:relative } /* UPDATED: để gắn status chip */
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
     .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
     .content a{ color:#0ea5e9; text-decoration:underline }
@@ -114,10 +114,10 @@
     .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
-    /* UPDATED: status “Thinking…”/“Thought” là chữ mờ nằm trên cùng 1 icon */
+    /* UPDATED: status “Thinking…/Thought” là chữ mờ nằm trên avatar của cùng 1 bubble */
     .status-chip{
-      position:absolute; left:42px; top:-10px; font-size:12px; color:var(--muted);
-      user-select:none; pointer-events:none;
+      position:absolute; left:42px; top:-10px;  /* ngay phía trên đầu avatar (28px + margin) */
+      font-size:12px; color:var(--muted); user-select:none; pointer-events:none;
     }
 
     @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
@@ -129,9 +129,8 @@
       padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));
     }
     .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative } /* UPDATED: relative để đặt nút gửi trong ô nhập */
-
     #prompt{
-      /* UPDATED: chừa chỗ bên phải cho nút gửi trong ô */
+      /* UPDATED: chừa chỗ cho nút gửi tròn trong ô */
       flex:1; padding:12px 56px 12px 12px;
       border:1px solid var(--bubble-border); border-radius:12px;
       outline:none; font-size:16px;
@@ -156,25 +155,25 @@
     #scrollBtn svg{ width:22px; height:22px; display:block }
     #scrollBtn.show{ opacity:1; visibility:visible }
 
-    body.kbd-open{ overflow:hidden }
-    @media (max-width:600px){
-      .chat-wrapper{ max-width:100%; height:100svh; border-radius:0 }
-      header img{ height:36px }
-    }
-
-    /* UPDATED: Nút gửi tròn nền đen trong ô nhập (giống ChatGPT) */
+    /* UPDATED: nút gửi tròn viền đen + mũi tên trắng bên trong ô (giống ChatGPT) */
     .inbox-send{
       position:absolute; right:12px; bottom:12px; width:40px; height:40px;
       border-radius:999px; background:#000; color:#fff; border:1px solid #000;
       display:none; align-items:center; justify-content:center; cursor:pointer;
       box-shadow:0 2px 8px rgba(0,0,0,.10);
     }
+    .inbox-send.show{ display:inline-flex }
     .inbox-send svg{ width:20px; height:20px; display:block }
-    .inbox-send.show{ display:inline-flex; }
-    .inbox-send:disabled{ opacity:.5; cursor:not-allowed; }
+    .inbox-send:disabled{ opacity:.5; cursor:not-allowed }
 
-    /* UPDATED: Ẩn nút Send cũ nhưng giữ nguyên DOM */
+    /* UPDATED: Ẩn nút Send cũ nhưng vẫn giữ nguyên DOM để không phá logic khác */
     #sendBtn{ display:none !important; }
+
+    body.kbd-open{ overflow:hidden }
+    @media (max-width:600px){
+      .chat-wrapper{ max-width:100%; height:100svh; border-radius:0 }
+      header img{ height:36px }
+    }
   </style>
 </head>
 <body>
@@ -197,8 +196,8 @@
       <p>I am the AI Agent of PPS, here to support you 24/7</p>
     </div>
     <div class="controls">
-      <!-- UPDATED: nút 3 chấm + menu Sign out -->
-      <div class="kebab" id="kebabBtn" aria-label="More">
+      <!-- UPDATED: Kebab 3 chấm + menu Sign out -->
+      <div class="kebab" id="kebabBtn" aria-label="More"> <!-- UPDATED -->
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <circle cx="6" cy="12" r="2"></circle>
           <circle cx="12" cy="12" r="2"></circle>
@@ -208,8 +207,8 @@
           <button class="kebab-item" id="kebabSignOut">Sign out</button>
         </div>
       </div>
-      <!-- Giữ nút signout gốc nhưng ẩn để không phá bind khác -->
-      <button class="signout hidden" id="signoutBtn">Sign out</button> <!-- UPDATED -->
+      <!-- Giữ nguyên nút signout gốc nhưng ẩn (để không phá các bind khác nếu có) -->
+      <button class="signout hidden" id="signoutBtn">Sign out</button> <!-- UPDATED: hidden -->
     </div>
   </header>
   <div id="chat"></div>
@@ -221,14 +220,14 @@
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <!-- UPDATED: Nút gửi mới trong ô nhập -->
+      <!-- UPDATED: nút gửi tròn trong ô nhập -->
       <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 19V6"></path>
           <path d="M5 13l7-7 7 7"></path>
         </svg>
       </button>
-      <button id="sendBtn">Send</button> <!-- vẫn giữ nguyên phần gốc, đã ẩn bằng CSS -->
+      <button id="sendBtn">Send</button> <!-- giữ nguyên DOM, đã ẩn bằng CSS -->
     </div>
   </footer>
 </div>
@@ -275,10 +274,10 @@ const chatBox=document.getElementById('chatUI');
 const loginMsg=document.getElementById('loginMsg');
 const signoutBtn=document.getElementById('signoutBtn');
 
-/* UPDATED: Kebab trigger */
-const kebabBtn=document.getElementById('kebabBtn');
-const kebabMenu=document.getElementById('kebabMenu');
-const kebabSignOut=document.getElementById('kebabSignOut');
+/* UPDATED: Kebab events */
+const kebabBtn=document.getElementById('kebabBtn');     /* UPDATED */
+const kebabMenu=document.getElementById('kebabMenu');   /* UPDATED */
+const kebabSignOut=document.getElementById('kebabSignOut'); /* UPDATED */
 
 function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
 function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
@@ -304,17 +303,9 @@ signoutBtn.addEventListener('click',signOut);
 (async()=>{const r=await fetch("/api/session").catch(()=>null);if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}})();
 
 /* UPDATED: Kebab open/close + action */
-kebabBtn?.addEventListener('click', (e)=>{
-  e.stopPropagation();
-  kebabMenu.classList.toggle('show');
-});
-document.addEventListener('click', (e)=>{
-  if(!kebabBtn.contains(e.target)) kebabMenu.classList.remove('show');
-});
-kebabSignOut?.addEventListener('click', ()=>{
-  kebabMenu.classList.remove('show');
-  signOut();
-});
+kebabBtn?.addEventListener('click', (e)=>{ e.stopPropagation(); kebabMenu.classList.toggle('show'); });
+document.addEventListener('click', (e)=>{ if(!kebabBtn.contains(e.target)) kebabMenu.classList.remove('show'); });
+kebabSignOut?.addEventListener('click', ()=>{ kebabMenu.classList.remove('show'); signOut(); });
 </script>
 
 <script>
@@ -344,18 +335,18 @@ function saveMessages(arr){
 }
 let messages=loadMessages();renderHistory(messages);
 
-/* UPDATED: Nút gửi mới trong ô nhập (hiện khi có nội dung) */
-const inboxSend=document.getElementById('inboxSend');
-function toggleInboxSend(){
+/* UPDATED: Nút gửi tròn trong ô nhập (chỉ hiện khi có nội dung) */
+const inboxSend=document.getElementById('inboxSend'); /* UPDATED */
+function toggleInboxSend(){ /* UPDATED */
   const hasText=!!inputEl.value.trim();
   inboxSend.classList.toggle('show', hasText);
   inboxSend.disabled=!hasText;
 }
-inputEl.addEventListener('input', toggleInboxSend);
-toggleInboxSend();
+inputEl.addEventListener('input', toggleInboxSend); /* UPDATED */
+toggleInboxSend(); /* UPDATED */
 
-btnEl.addEventListener('click',onSend); // Giữ nguyên binding cũ (dù đã ẩn)
-inboxSend.addEventListener('click',onSend); // UPDATED: gửi bằng nút tròn trong ô nhập
+btnEl.addEventListener('click',onSend); // Giữ binding cũ (nút đã ẩn)
+inboxSend.addEventListener('click',onSend); // UPDATED: gửi bằng nút tròn trong ô
 
 /* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
 inputEl.addEventListener('keydown',e=>{
@@ -388,8 +379,8 @@ function renderMarkdown(md){
   return DOMPurify.sanitize(html);
 }
 
-/* UPDATED: status chip (Thinking... / Thought) — cùng 1 icon AI */
-function setStatusChip(targetNode, text){
+/* UPDATED: helper status chip (Thinking.../Thought) hiển thị trên cùng 1 icon AI */
+function setStatusChip(targetNode, text){ /* UPDATED */
   if(!targetNode) return;
   let chip=targetNode.querySelector('.status-chip');
   if(!chip){
@@ -409,7 +400,8 @@ function appendBubble(text,role='assistant',imageUrl=null){
     const av=document.createElement('img'); av.src="assistant_icon_256.png"; av.alt="🤖"; av.className="avatar";
     av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
     d.appendChild(av);
-    /* UPDATED: khởi tạo status chip rỗng */
+
+    /* UPDATED: khởi tạo status chip trong bubble assistant */
     const chip=document.createElement('div'); chip.className='status-chip'; chip.textContent='';
     d.appendChild(chip);
   }
@@ -438,11 +430,11 @@ function renderHistory(arr){
   sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
 }
 
-/* UPDATED: STREAMING/NDJSON robust – tránh double/lộn xộn, hỗ trợ cả khi tắt stream */
-async function streamFromWebhook(sessionId, message, targetNode){
+/* UPDATED: STREAMING/Non-stream robust để tránh double/lộn xộn và show đúng khi tắt stream */
+async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
-    'Accept':'text/event-stream, application/x-ndjson, application/json, text/plain'
+    'Accept':'text/event-stream, application/x-ndjson, application/json, text/plain' /* UPDATED */
   };
   const body=JSON.stringify({sessionId,chatInput:message});
   const attempts=[
@@ -453,11 +445,9 @@ async function streamFromWebhook(sessionId, message, targetNode){
   for(const a of attempts){
     try{const r=await fetch(a.url,{method:a.method,headers,body});if(r.ok){res=r;break;}}catch{}
   }
-
-  // fallback non-stream (không có stream endpoint)
   if(!res){
-    const {content,image_url}=await sendToWebhook(sessionId,message);
-    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought');
+    const {content,image_url}=await sendToWebhook(sessionId,message); /* tắt stream → về non-stream */
+    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought'); /* UPDATED */
     targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
     if(image_url){
       const w=document.createElement('div');w.className='content';
@@ -469,79 +459,104 @@ async function streamFromWebhook(sessionId, message, targetNode){
 
   const ct=(res.headers.get('content-type')||'').toLowerCase();
 
-  // Helper: đọc NDJSON/SSE theo dòng, không trim, chống trùng timestamp
-  async function readStreamByLine(response, treatAsSSE=false){
-    const reader=response.body.getReader(); const decoder=new TextDecoder();
-    let buffer=''; let acc=''; let started=false;
-    const seenTs=new Set();
-    while(true){
-      const {done,value}=await reader.read();
-      if(value) buffer+=decoder.decode(value,{stream:!done});
-
-      let idx,start=0;
-      while((idx=buffer.indexOf('\n',start))>=0){
-        let raw=buffer.slice(start,idx); start=idx+1;
-        let line = treatAsSSE ? raw.replace(/^\s*data:\s?/,'') : raw;
-        if(!line) continue;
-
-        if(line==='[DONE]') continue;
-
-        if(line.startsWith('{')||line.startsWith('[')){
-          try{
-            const obj=JSON.parse(line);
-            const ts=obj?.metadata?.timestamp;
-            if(ts!=null){ if(seenTs.has(ts)) {continue;} seenTs.add(ts); }
-
-            let chunk='';
-            if(obj?.type==='item'&&typeof obj?.content==='string') chunk=obj.content;
-            else if(typeof obj?.delta==='string') chunk=obj.delta;
-            else if(typeof obj?.content==='string') chunk=obj.content;
-            else if(typeof obj?.output==='string') chunk=obj.output;
-
-            if(chunk){
-              if(!started){ setStatusChip(targetNode,'Thought'); started=true; }
-              acc+=chunk;
-              targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
-              chatEl.scrollTop=chatEl.scrollHeight;
-            }
-          }catch{ /* bỏ qua non-JSON */ }
-        }
+  /* Helper NDJSON/JSON-per-line (tắt streaming hoặc text/plain) — KHÔNG lọc theo nội dung, chỉ theo timestamp */
+  function parseNdjsonText(text){
+    const rawLines=text.split(/\r?\n/);
+    let parts=[]; const seenTs=new Set();
+    for(let raw of rawLines){
+      if(!raw) continue;
+      let line=raw.replace(/^\s*data:\s?/,'');
+      if(line.startsWith('{')||line.startsWith('[')){
+        try{
+          const obj=JSON.parse(line);
+          const ts=obj?.metadata?.timestamp;
+          if(ts!=null){ if(seenTs.has(ts)) continue; seenTs.add(ts); }
+          let added='';
+          if(obj?.type==='item'&&typeof obj?.content==='string') added=obj.content;
+          else if(typeof obj?.delta==='string') added=obj.delta;
+          else if(typeof obj?.content==='string') added=obj.content;
+          else if(typeof obj?.output==='string') added=obj.output;  /* UPDATED: hỗ trợ non-stream */
+          if(added){ parts.push(added); }
+          continue;
+        }catch{/* fall-through */}
       }
-      buffer=buffer.slice(start);
-      if(done) break;
+      parts.push(line);
     }
-    return acc;
+    return parts.join('');
   }
 
-  if(ct.includes('event-stream')){
-    return await readStreamByLine(res, /*treatAsSSE*/true);
-  }
-
-  if(res.body){
-    return await readStreamByLine(res, /*treatAsSSE*/false);
-  }else{
+  /* Non-stream (server không trả SSE) */
+  if(!/event-stream|ndjson/.test(ct)){
     const text=await res.text();
     const trimmed=text.trim();
     if(trimmed.startsWith('{')&&trimmed.endsWith('}')){
       try{
         const obj=JSON.parse(trimmed);
-        const content=obj.content||obj.output||'';
+        const content=(typeof obj.content==='string')?obj.content:(typeof obj.output==='string')?obj.output:'';
         if(content){
-          if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought');
+          if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought'); /* UPDATED */
           targetNode.querySelector('.content').innerHTML=renderMarkdown(content);
+          chatEl.scrollTop=chatEl.scrollHeight;
           return content;
         }
-      }catch{}
+      }catch{/* ignore */}
     }
-    // NDJSON text → tạo stream giả
-    const fake=new Response(new Blob([text]));
-    return await readStreamByLine(fake,false);
+    const final=parseNdjsonText(text);
+    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'Thought'); /* UPDATED */
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(final||'(không có nội dung)');
+    chatEl.scrollTop=chatEl.scrollHeight;
+    return final||'';
   }
+
+  /* STREAM thực sự (SSE) — không lặp nội dung, chỉ skip theo timestamp */
+  const reader=res.body.getReader();const decoder=new TextDecoder();
+  let buffer='';let acc=''; let started=false;
+  const seenTs=new Set();
+
+  while(true){
+    const {done,value}=await reader.read();
+    if(value) buffer+=decoder.decode(value,{stream:!done});
+
+    let idx,start=0;
+    while((idx=buffer.indexOf('\n',start))>=0){
+      let raw=buffer.slice(start,idx); start=idx+1;
+      let line=raw.replace(/^\s*data:\s?/,'');
+      if(!line) continue;
+
+      if(line.startsWith('{')||line.startsWith('[')){
+        try{
+          const obj=JSON.parse(line);
+          if(obj?.type==='end'){ /* ignore end marker */ }
+
+          const ts=obj?.metadata?.timestamp;
+          if(ts!=null){ if(seenTs.has(ts)) continue; seenTs.add(ts); }
+
+          let chunk='';
+          if(obj?.type==='item'&&typeof obj?.content==='string') chunk=obj.content;
+          else if(typeof obj?.delta==='string') chunk=obj.delta;
+          else if(typeof obj?.content==='string') chunk=obj.content;
+
+          if(chunk){
+            if(!started){ setStatusChip(targetNode,'Thought'); started=true; } /* UPDATED */
+            acc+=chunk;
+            targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+            chatEl.scrollTop=chatEl.scrollHeight;
+          }
+        }catch{
+          // bỏ qua non-JSON để tránh rác trong stream
+        }
+      }
+    }
+    buffer=buffer.slice(start);
+    if(done) break;
+  }
+  return acc;
 }
 
 /* Mặc định dùng streaming; nếu lỗi sẽ fallback sang non-stream */
 async function onSend(){
   const text=inputEl.value.trim(); if(!text) return;
+
   appendBubble(text,'user');
   messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
 
@@ -549,7 +564,7 @@ async function onSend(){
   toggleInboxSend(); /* UPDATED */
 
   const node=appendBubble('','assistant'); // placeholder để stream vào
-  setStatusChip(node,'Thinking...'); /* UPDATED: show Thinking... trên cùng icon */
+  setStatusChip(node,'Thinking...'); /* UPDATED: show Thinking... trên icon cùng bubble */
 
   try{
     const finalText=await streamFromWebhook(sessionId,text,node);
@@ -561,7 +576,8 @@ async function onSend(){
     messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
     saveMessages(messages);
   }finally{
-    setTimeout(()=>setStatusChip(node,''),800); /* UPDATED: ẩn status sau khi xong */
+    /* UPDATED: ẩn status sau khi hoàn tất một nhịp ngắn (giống ChatGPT) */
+    setTimeout(()=>setStatusChip(node,''), 800);
   }
 }
 
@@ -588,7 +604,7 @@ async function sendToWebhook(sessionId,message){
   }
 
   const text=await res.text();
-  const lines=text.split(/\r?\n/); // KHÔNG .trim() để giữ dấu
+  const lines=text.split(/\r?\n/); /* KHÔNG trim để giữ dấu/spacing */
   let acc='', image_url=null;
   for(const raw of lines){
     let line=raw.replace(/^\s*data:\s?/,'');
