@@ -392,31 +392,6 @@ function setStatusChip(targetNode, typeOrText){
   }
 }
 
-/* NEW: helper thử nhiều đường dẫn icon trước khi fallback 🤖 */
-async function resolveAssistantIcon() {
-  const candidates = [
-    'assistant_icon.png',       // cùng thư mục với index.html
-    '/assistant_icon.png',      // tuyệt đối root
-    './assistant_icon.png',     // tương đối
-    'assets/assistant_icon.png',
-    '/assets/assistant_icon.png'
-  ];
-
-  for (const url of candidates) {
-    try {
-      // HEAD không phải lúc nào cũng bật, dùng Image() để test load thực
-      await new Promise((res, rej) => {
-        const i = new Image();
-        i.onload = () => res(true);
-        i.onerror = () => rej();
-        i.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now(); // bust cache lần đầu
-      });
-      return url;
-    } catch {}
-  }
-  return null; // không tìm được
-}
-
 /* appendBubble trả về node để stream có thể cập nhật trực tiếp */
 async function appendBubble(text,role='assistant',imageUrl=null){
   const d=document.createElement('div');
