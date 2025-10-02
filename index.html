@@ -393,26 +393,16 @@ function setStatusChip(targetNode, typeOrText){
 }
 
 /* appendBubble trả về node để stream có thể cập nhật trực tiếp */
-async function appendBubble(text,role='assistant',imageUrl=null){
+function appendBubble(text,role='assistant',imageUrl=null){
   const d=document.createElement('div');
   d.className='msg '+(role==='user'?'user':'assistant');
 
   if(role==='assistant'){
-    const av=document.createElement('img');
+    const av=document.createElement('img'); 
+    av.src="assistant_icon_256.png"; /* giữ nguyên icon PNG như yêu cầu */
     av.alt="Assistant"; av.className="avatar";
-
-    /* FIX: thử nhiều đường dẫn icon; chỉ fallback 🤖 khi tất cả thất bại */
-    const iconUrl = await resolveAssistantIcon();
-    if (iconUrl) {
-      av.src = iconUrl;
-      av.onerror = () => { av.replaceWith(document.createTextNode("🤖")); };
-    } else {
-      av.replaceWith(document.createTextNode("🤖"));
-    }
-
+    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
     d.appendChild(av);
-
-    // status chip
     const chip=document.createElement('div'); chip.className='status-chip'; chip.textContent='';
     d.appendChild(chip);
   }
@@ -435,7 +425,6 @@ async function appendBubble(text,role='assistant',imageUrl=null){
   chatEl.scrollTop=chatEl.scrollHeight;
   return d;
 }
-
 function renderHistory(arr){
   chatEl.innerHTML='';
   const sorted=[...arr].sort((a,b)=>(a.ts||0)-(b.ts||0));
