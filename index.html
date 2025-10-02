@@ -392,17 +392,52 @@ function setStatusChip(targetNode, typeOrText){
   }
 }
 
+/* NEW: helper thử nhiều đường dẫn icon trước khi fallback 🤖 */
+async function resolveAssistantIcon() {
+  const candidates = [
+    'assistant_icon.png',       // cùng thư mục với index.html
+    '/assistant_icon.png',      // tuyệt đối root
+    './assistant_icon.png',     // tương đối
+    'assets/assistant_icon.png',
+    '/assets/assistant_icon.png'
+  ];
+
+  for (const url of candidates) {
+    try {
+      // HEAD không phải lúc nào cũng bật, dùng Image() để test load thực
+      await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(true);
+        i.onerror = () => rej();
+        i.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now(); // bust cache lần đầu
+      });
+      return url;
+    } catch {}
+  }
+  return null; // không tìm được
+}
+
 /* appendBubble trả về node để stream có thể cập nhật trực tiếp */
-function appendBubble(text,role='assistant',imageUrl=null){
+async function appendBubble(text,role='assistant',imageUrl=null){
   const d=document.createElement('div');
   d.className='msg '+(role==='user'?'user':'assistant');
 
   if(role==='assistant'){
-    const av=document.createElement('img'); 
-    av.src="assistant_icon.png"; /* giữ nguyên icon PNG như yêu cầu */
+    const av=document.createElement('img');
     av.alt="Assistant"; av.className="avatar";
-    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
+
+    /* FIX: thử nhiều đường dẫn icon; chỉ fallback 🤖 khi tất cả thất bại */
+    const iconUrl = await resolveAssistantIcon();
+    if (iconUrl) {
+      av.src = iconUrl;
+      av.onerror = () => { av.replaceWith(document.createTextNode("🤖")); };
+    } else {
+      av.replaceWith(document.createTextNode("🤖"));
+    }
+
     d.appendChild(av);
+
+    // status chip
     const chip=document.createElement('div'); chip.className='status-chip'; chip.textContent='';
     d.appendChild(chip);
   }
@@ -425,6 +460,7 @@ function appendBubble(text,role='assistant',imageUrl=null){
   chatEl.scrollTop=chatEl.scrollHeight;
   return d;
 }
+
 function renderHistory(arr){
   chatEl.innerHTML='';
   const sorted=[...arr].sort((a,b)=>(a.ts||0)-(b.ts||0));
