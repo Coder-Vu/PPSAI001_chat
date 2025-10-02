@@ -384,7 +384,7 @@ function setStatusChip(targetNode, typeOrText){
     targetNode.appendChild(chip);
   }
   if(typeOrText==='thinking'){
-    chip.innerHTML = `<span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span><span>Thinking…</span>`;
+    chip.innerHTML = `<span class="pulse">Thinking…</span>`;
   }else if(typeOrText==='thought'){
     chip.innerHTML = `<span class="pulse">Thought</span>`;
   }else{
