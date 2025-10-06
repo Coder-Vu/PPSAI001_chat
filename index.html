@@ -97,26 +97,28 @@
           display:flex; align-items:flex-start; gap:10px; position:relative }
     .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
     .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
-    .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 }
+    .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 } /* UPDATED: bỏ border để hòa nền */
+
     .content a{ color:#0ea5e9; text-decoration:underline }
     .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
+
+    /* UPDATED: hỗ trợ video hiển thị đẹp như ảnh */
+    .content video{
+      max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0;
+      display:block;
+    }
+
     .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
     .content th,.content td{ border:1px solid var(--bubble-border); padding:6px 8px; text-align:left }
     .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
     .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
 
-    /* UPDATED: Status “Thinking…/Thought” (to hơn + nhấp nháy giống ChatGPT) đặt trên cùng icon AI */
+    /* UPDATED: Status “Thinking…/Thought” (to hơn + nhấp nháy) */
     .status-chip{
       position:absolute; left:42px; top:-12px;
       font-size:13px; color:var(--muted); user-select:none; pointer-events:none;
       display:inline-flex; gap:6px; align-items:center;
     }
-    .dots { display:inline-flex; gap:4px; }
-    .dot  { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.35; }
-    .dot:nth-child(1){ animation:blink 1s .0s infinite ease-in-out }
-    .dot:nth-child(2){ animation:blink 1s .2s infinite ease-in-out }
-    .dot:nth-child(3){ animation:blink 1s .4s infinite ease-in-out }
-    @keyframes blink{ 0%,80%,100%{opacity:.25} 40%{opacity:1} }
     .pulse { animation:pulse 1.2s ease-in-out infinite }
     @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
 
@@ -130,7 +132,7 @@
     }
     .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative }
     #prompt{
-      /* UPDATED: chừa chỗ cho nút gửi tròn 44px trong ô */
+      /* chừa chỗ cho nút gửi tròn 44px trong ô */
       flex:1; padding:12px 64px 12px 12px;
       border:1px solid var(--bubble-border); border-radius:12px;
       outline:none; font-size:16px;
@@ -139,10 +141,10 @@
     }
     #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
 
-    /* Giữ DOM nút Send cũ (ẩn để không phá bind khác nếu có) */
+    /* Ẩn nút Send cũ (giữ DOM) */
     #sendBtn{ display:none !important; }
 
-    /* UPDATED: nút gửi tròn trong ô nhập – giống ChatGPT */
+    /* UPDATED: nút gửi tròn – canh giữa mép phải */
     .inbox-send{
       position:absolute; right:12px; top:50%; transform:translateY(-50%); width:44px; height:44px;
       border-radius:999px; background:#000; color:#fff; border:1px solid #000;
@@ -151,7 +153,7 @@
     }
     .inbox-send.show{ display:inline-flex }
     .inbox-send:disabled{ opacity:.5; cursor:not-allowed }
-    .inbox-send svg{ width:22px; height:22px; display:block } /* UPDATED: mũi tên to hơn, rõ nét */
+    .inbox-send svg{ width:22px; height:22px; display:block }
 
     #scrollBtn{
       position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
@@ -217,7 +219,7 @@
   <footer id="appFooter">
     <div class="footer-inner">
       <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <!-- UPDATED: nút gửi tròn trong ô nhập (đẹp & cân đối) -->
+      <!-- Nút gửi tròn trong ô nhập -->
       <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 19V6"></path>
@@ -304,7 +306,7 @@ kebabSignOut?.addEventListener('click', ()=>{ kebabMenu.classList.remove('show')
 </script>
 
 <script>
-/* Chat + Streaming vững (UTF-8, luôn đọc stream nếu có res.body, SSE/NDJSON, throttle 33ms) */
+/* Chat + Streaming vững (UTF-8, SSE/NDJSON, throttle 33ms) */
 const chatEl=document.getElementById('chat');
 const inputEl=document.getElementById('prompt');
 const btnEl=document.getElementById('sendBtn');
@@ -340,8 +342,8 @@ function toggleInboxSend(){
 inputEl.addEventListener('input', toggleInboxSend);
 toggleInboxSend();
 
-btnEl.addEventListener('click',onSend);     // giữ bind cũ (ẩn)
-inboxSend.addEventListener('click',onSend); // nút tròn trong ô
+btnEl.addEventListener('click',onSend);
+inboxSend.addEventListener('click',onSend);
 
 /* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
 inputEl.addEventListener('keydown',e=>{
@@ -374,7 +376,7 @@ function renderMarkdown(md){
   return DOMPurify.sanitize(html);
 }
 
-/* Status chip trên cùng icon AI: “Thinking…” / “Thought” (to + nhấp nháy) */
+/* Status chip trên cùng icon AI */
 function setStatusChip(targetNode, typeOrText){
   if(!targetNode) return;
   let chip=targetNode.querySelector('.status-chip');
@@ -393,13 +395,14 @@ function setStatusChip(targetNode, typeOrText){
 }
 
 /* appendBubble trả về node để stream có thể cập nhật trực tiếp */
-function appendBubble(text,role='assistant',imageUrl=null){
+/* UPDATED: nhận thêm videoUrl và render <video> */
+function appendBubble(text,role='assistant',imageUrl=null,videoUrl=null){
   const d=document.createElement('div');
   d.className='msg '+(role==='user'?'user':'assistant');
 
   if(role==='assistant'){
     const av=document.createElement('img'); 
-    av.src="assistant_icon_256.png"; /* giữ nguyên icon PNG như yêu cầu */
+    av.src="assistant_icon_256.png"; /* icon trợ lý */
     av.alt="Assistant"; av.className="avatar";
     av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
     d.appendChild(av);
@@ -421,6 +424,17 @@ function appendBubble(text,role='assistant',imageUrl=null){
     </a>`;
     chatEl.appendChild(w);
   }
+  if(videoUrl){
+    const v=document.createElement('div');
+    v.className='content';
+    const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+    v.innerHTML = `
+      <video controls playsinline>
+        <source src="${encodeURI(videoUrl)}" type="${type}">
+        Your browser does not support the video tag.
+      </video>`;
+    chatEl.appendChild(v);
+  }
 
   chatEl.scrollTop=chatEl.scrollHeight;
   return d;
@@ -428,11 +442,93 @@ function appendBubble(text,role='assistant',imageUrl=null){
 function renderHistory(arr){
   chatEl.innerHTML='';
   const sorted=[...arr].sort((a,b)=>(a.ts||0)-(b.ts||0));
-  sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url));
+  sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url, m.video_url));
 }
 
-/* ========== STREAMING CORE (đã fix) ========== */
-/* FIX: Luôn đọc stream nếu có res.body; parser bỏ qua begin/end; render dần (33ms) */
+/* ---------- UPDATED: Poll helper cho video long-running ---------- */
+async function pollVideoUntilReady(opName, onDone, onProgress){
+  const poll = async () => {
+    try{
+      const r = await fetch(`/api/media?op=${encodeURIComponent(opName)}`, { method:'GET' });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j?.error||'poll_error');
+      if (j.pending){
+        onProgress && onProgress(j);
+        setTimeout(poll, j.poll_after_ms || 5000);
+      }else{
+        onDone && onDone(j.video_url, null);
+      }
+    }catch(e){
+      onDone && onDone(null, e);
+    }
+  };
+  poll();
+}
+
+/* ---------- UPDATED: helper gọi media khi phát hiện directive trong stream ---------- */
+async function handleMediaDirective(media, targetNode){
+  if(!media || !media.type || !media.prompt) return;
+
+  const contentEl = targetNode.querySelector('.content');
+  const old = contentEl.innerHTML;
+  const waiting = media.type === 'image' ? '🖼️ Đang tạo ảnh…' : '🎬 Đang tạo video…';
+  contentEl.innerHTML = renderMarkdown(`${old ? old+'\n\n' : ''}${waiting}`);
+
+  try{
+    const r = await fetch('/api/media', {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({ type: media.type, prompt: media.prompt })
+    });
+    const j = await r.json();
+
+    if(!r.ok || !j.ok){
+      contentEl.innerHTML = renderMarkdown(`${old}\n\n⚠️ Tạo media lỗi: ${j?.error||'unknown'}`);
+      return;
+    }
+
+    if(j.image_url){
+      const wrap=document.createElement('div');
+      wrap.className='content';
+      wrap.innerHTML = `<img src="${j.image_url}" alt="Generated image" style="max-width:100%;border-radius:12px;margin-top:8px">`;
+      targetNode.appendChild(wrap);
+    }else if(j.video_url){
+      const wrap=document.createElement('div');
+      wrap.className='content';
+      const type = j.video_url.startsWith('data:video/webm') ? 'video/webm' : 'video/mp4';
+      wrap.innerHTML = `<video controls playsinline style="max-width:100%;border-radius:12px;margin-top:8px">
+                          <source src="${j.video_url}" type="${type}">
+                        </video>`;
+      targetNode.appendChild(wrap);
+    }else if(j.pending && j.op_name){
+      await new Promise((resolve)=>{
+        pollVideoUntilReady(j.op_name, (videoUrl, err)=>{
+          if(err || !videoUrl){
+            contentEl.innerHTML = renderMarkdown(`${old}\n\n⚠️ Tạo video lỗi.`);
+            resolve(); return;
+          }
+          const wrap=document.createElement('div');
+          wrap.className='content';
+          const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+          wrap.innerHTML = `<video controls playsinline style="max-width:100%;border-radius:12px;margin-top:8px">
+                              <source src="${videoUrl}" type="${type}">
+                            </video>`;
+          targetNode.appendChild(wrap);
+          resolve();
+        });
+      });
+    }
+
+    const doneMsg = media.type==='image' ? '🖼️ Đã tạo ảnh' : '🎬 Đã tạo video';
+    contentEl.innerHTML = renderMarkdown(`${old}\n\n${doneMsg}`);
+    chatEl.scrollTop = chatEl.scrollHeight;
+
+  }catch(e){
+    contentEl.innerHTML = renderMarkdown(`⚠️ Tạo media lỗi: ${String(e)}`);
+  }
+}
+
+/* ========== STREAMING CORE (bắt _media trong SSE) ========== */
 async function streamFromWebhook(sessionId,message,targetNode){
   const headers={
     'Content-Type':'application/json',
@@ -448,28 +544,52 @@ async function streamFromWebhook(sessionId,message,targetNode){
     try{const r=await fetch(t.url,{method:t.method,headers,body}); if(r.ok){res=r;break;}}catch{}
   }
   if(!res){
-    // Fallback non-stream (một lần)
-    const {content,image_url}=await sendToWebhook(sessionId,message);
+    // Fallback non-stream một lần
+    const result=await sendToWebhook(sessionId,message);
     if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'thought');
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(content||'(không có nội dung)');
-    if(image_url){
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(result.content||'(không có nội dung)');
+
+    if(result.image_url){
       const w=document.createElement('div');w.className='content';
-      w.innerHTML=`<a href="${encodeURI(image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(image_url)}" alt="Image from AI"></a>`;
+      w.innerHTML=`<a href="${encodeURI(result.image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(result.image_url)}" alt="Image from AI"></a>`;
       chatEl.appendChild(w);
     }
-    return content||'';
+
+    if(result.pending && result.op_name){
+      const typing=document.createElement('div');
+      typing.className='content typing';
+      typing.textContent='Generating video…';
+      targetNode.after(typing);
+
+      await new Promise((resolve)=>{
+        pollVideoUntilReady(result.op_name, (videoUrl, err)=>{
+          typing.remove();
+          if(err || !videoUrl){
+            const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
+            eDiv.textContent='Video failed. Please try again.';
+            chatEl.appendChild(eDiv);
+            resolve();
+            return;
+          }
+          const v=document.createElement('div'); v.className='content';
+          const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+          v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
+          chatEl.appendChild(v);
+          result.video_url = videoUrl;
+          resolve();
+        });
+      });
+    }
+    return result;
   }
 
-  // ---- ĐỌC STREAM (không phụ thuộc content-type) ----
-  if(!res.body){
-    // Một số môi trường không expose stream → đọc text thường
-    const text=await res.text();
-    return renderStreamLikeText(text, targetNode, true);
-  }
-
+  // ---- ĐỌC STREAM (SSE/NDJSON) ----
   const reader=res.body.getReader();
-  const decoder=new TextDecoder('utf-8'); // đảm bảo UTF-8 tiếng Việt
+  const decoder=new TextDecoder('utf-8');
   let buffer=''; let acc=''; let started=false;
+
+  let imageRendered=false, videoRendered=false;
+  let lastImageUrl=null, lastVideoUrl=null;
 
   // throttle render 33ms
   let needs=false;
@@ -489,7 +609,6 @@ async function streamFromWebhook(sessionId,message,targetNode){
     const {done,value}=await reader.read();
     if(value){ buffer += decoder.decode(value,{stream:!done}); }
 
-    // Xử lý theo sự kiện SSE: chia theo newline, giữ nguyên thứ tự
     let pos=0, nl;
     while((nl = buffer.indexOf('\n', pos)) !== -1){
       const raw = buffer.slice(pos, nl);
@@ -498,17 +617,57 @@ async function streamFromWebhook(sessionId,message,targetNode){
       let line = raw;
       if(!line) continue;
 
-      // Chỉ quan tâm phần sau "data:"
       if(/^\s*data\s*:/.test(line)) line = line.replace(/^\s*data\s*:\s?/, '');
 
-      // Thử JSON trước
       if(line[0]==='{' || line[0]==='['){
         try{
           const obj = JSON.parse(line);
 
-          // FIX: bỏ qua begin/end của n8n
+          // UPDATED: bắt directive _media từ GPT (không render JSON ra UI)
+          if (obj && obj._media && typeof obj._media === 'object') {
+            handleMediaDirective(obj._media, targetNode);
+            continue;
+          }
+
           if(obj.type === 'begin' || obj.type === 'end') { /* skip */ }
           else{
+            if(obj.pending && obj.op_name && !videoRendered){
+              const typing=document.createElement('div');
+              typing.className='content typing';
+              typing.textContent='Generating video…';
+              targetNode.after(typing);
+
+              pollVideoUntilReady(obj.op_name, (videoUrl, err)=>{
+                typing.remove();
+                if(err || !videoUrl){
+                  const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
+                  eDiv.textContent='Video failed. Please try again.';
+                  chatEl.appendChild(eDiv);
+                  return;
+                }
+                videoRendered=true;
+                lastVideoUrl=videoUrl;
+                const v=document.createElement('div'); v.className='content';
+                const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+                v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
+                chatEl.appendChild(v);
+              });
+            }
+
+            if(obj.image_url && !imageRendered){
+              imageRendered=true; lastImageUrl=obj.image_url;
+              const w=document.createElement('div'); w.className='content';
+              w.innerHTML=`<a href="${encodeURI(obj.image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(obj.image_url)}" alt="Image from AI"></a>`;
+              chatEl.appendChild(w);
+            }
+            if(obj.video_url && !videoRendered){
+              videoRendered=true; lastVideoUrl=obj.video_url;
+              const v=document.createElement('div'); v.className='content';
+              const type = /\.webm$/i.test(obj.video_url) ? 'video/webm' : 'video/mp4';
+              v.innerHTML=`<video controls playsinline><source src="${encodeURI(obj.video_url)}" type="${type}"></video>`;
+              chatEl.appendChild(v);
+            }
+
             const chunk = pickContent(obj);
             if(chunk){
               if(!started){ setStatusChip(targetNode,'thought'); started=true; }
@@ -518,11 +677,20 @@ async function streamFromWebhook(sessionId,message,targetNode){
           }
           continue;
         }catch{
-          // không phải JSON → coi là text thường
+          // text thường: thử bắt JSON _media inline
+          try{
+            const m = line.match(/\{[\s\S]*"_media"[\s\S]*\}/);
+            if(m){
+              const o = JSON.parse(m[0]);
+              if(o && o._media){
+                handleMediaDirective(o._media, targetNode);
+                continue; // không render JSON ra UI
+              }
+            }
+          }catch{}
         }
       }
 
-      // Text thường (VD n8n push plain text)
       if(line.trim()){
         if(!started){ setStatusChip(targetNode,'thought'); started=true; }
         acc += line + '\n';
@@ -532,26 +700,72 @@ async function streamFromWebhook(sessionId,message,targetNode){
     buffer = buffer.slice(pos);
     if(done) break;
   }
-  // flush phần còn lại trong buffer (nếu có)
+
   if(buffer.trim()){
     let line = buffer.replace(/^\s*data\s*:\s?/, '');
     try{
       const obj=JSON.parse(line);
-      if(obj.type!=='begin' && obj.type!=='end'){
+      if(obj && obj._media && typeof obj._media === 'object'){
+        handleMediaDirective(obj._media, targetNode);
+      }else if(obj.type!=='begin' && obj.type!=='end'){
+        if(obj.pending && obj.op_name && !videoRendered){
+          const typing=document.createElement('div');
+          typing.className='content typing';
+          typing.textContent='Generating video…';
+          targetNode.after(typing);
+          pollVideoUntilReady(obj.op_name, (videoUrl, err)=>{
+            typing.remove();
+            if(err || !videoUrl){
+              const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
+              eDiv.textContent='Video failed. Please try again.';
+              chatEl.appendChild(eDiv);
+              return;
+            }
+            videoRendered=true;
+            lastVideoUrl=videoUrl;
+            const v=document.createElement('div'); v.className='content';
+            const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+            v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
+            chatEl.appendChild(v);
+          });
+        }
+        if(obj.image_url && !imageRendered){
+          imageRendered=true; lastImageUrl=obj.image_url;
+          const w=document.createElement('div'); w.className='content';
+          w.innerHTML=`<a href="${encodeURI(obj.image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(obj.image_url)}" alt="Image from AI"></a>`;
+          chatEl.appendChild(w);
+        }
+        if(obj.video_url && !videoRendered){
+          videoRendered=true; lastVideoUrl=obj.video_url;
+          const v=document.createElement('div'); v.className='content';
+          const type = /\.webm$/i.test(obj.video_url) ? 'video/webm' : 'video/mp4';
+          v.innerHTML=`<video controls playsinline><source src="${encodeURI(obj.video_url)}" type="${type}"></video>`;
+          chatEl.appendChild(v);
+        }
         const chunk=pickContent(obj);
         if(chunk){ acc+=chunk; }
       }
-    }catch{ acc+=line+'\n'; }
+    }catch{
+      // Có thể là text thường
+      try{
+        const m = line.match(/\{[\s\S]*"_media"[\s\S]*\}/);
+        if(m){
+          const o = JSON.parse(m[0]);
+          if(o && o._media) handleMediaDirective(o._media, targetNode);
+        }else{
+          acc+=line+'\n';
+        }
+      }catch{
+        acc+=line+'\n';
+      }
+    }
     contentEl.innerHTML = renderMarkdown(acc);
   }
 
-  // tắt chip sau 800ms như ChatGPT
   setTimeout(()=>setStatusChip(targetNode,''),800);
-  return acc;
+  return { content: acc, image_url: lastImageUrl, video_url: lastVideoUrl };
 
-  // ---- helpers ----
   function pickContent(obj){
-    // Ưu tiên delta → content → output → item.content → data.text → text
     if(typeof obj.delta === 'string') return obj.delta;
     if(typeof obj.content === 'string') return obj.content;
     if(typeof obj.output  === 'string') return obj.output;
@@ -576,21 +790,46 @@ async function onSend(){
   setStatusChip(node,'thinking');
 
   try{
-    const finalText=await streamFromWebhook(sessionId,text,node);
-    messages.push({role:'assistant',content:finalText||'',image_url:null,ts:Date.now()});
+    const result=await streamFromWebhook(sessionId,text,node);
+    const finalText = (typeof result==='string') ? result : (result?.content||'');
+    const img = result && result.image_url ? result.image_url : null;
+    const vid = result && result.video_url ? result.video_url : null;
+
+    if(result && result.pending && result.op_name){
+      const typing=document.createElement('div');
+      typing.className='content typing';
+      typing.textContent='Generating video…';
+      node.after(typing);
+
+      await new Promise((resolve)=>{
+        pollVideoUntilReady(result.op_name, (videoUrl, err)=>{
+          typing.remove();
+          if(!err && videoUrl){
+            const v=document.createElement('div'); v.className='content';
+            const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+            v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
+            chatEl.appendChild(v);
+            messages.push({role:'assistant',content:'',image_url:null,video_url:videoUrl,ts:Date.now()});
+            saveMessages(messages);
+          }
+          resolve();
+        });
+      });
+    }
+
+    messages.push({role:'assistant',content:finalText,image_url:img,video_url:vid,ts:Date.now()});
     saveMessages(messages);
   }catch(err){
     const msg=`Error (stream): ${String(err)}`;
     node.querySelector('.content').innerHTML=renderMarkdown(msg);
-    messages.push({role:'assistant',content:msg,image_url:null,ts:Date.now()});
+    messages.push({role:'assistant',content:msg,image_url:null,video_url:null,ts:Date.now()});
     saveMessages(messages);
   }finally{
-    // nếu parser đã tắt chip thì thôi; nếu chưa, tắt sau 800ms
     setTimeout(()=>setStatusChip(node,''), 800);
   }
 }
 
-/* NON-STREAM fallback (đọc một lần, vẫn gom bỏ begin/end nếu có) */
+/* NON-STREAM fallback (gom NDJSON/text, bắt pending/op_name) */
 async function sendToWebhook(sessionId,message){
   const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson; charset=utf-8'};
   const res=await fetch("/api/chat",{method:'POST',headers,body:JSON.stringify({sessionId,chatInput:message})});
@@ -603,22 +842,33 @@ async function sendToWebhook(sessionId,message){
   if(ct.includes('application/json')){
     try{
       const data=await res.json();
-      let content=null,image_url=null;
-      if(Array.isArray(data)){const f=data[0]||{};content=f.content||f.output;image_url=f.url;}
-      else{content=data.content||data.output;image_url=data.url;}
-      return {content,image_url};
+      let content=null,image_url=null,video_url=null,pending=false,op_name=null;
+      if(Array.isArray(data)){
+        const f=data[0]||{};
+        content=f.content||f.output||'';
+        image_url=f.image_url||f.url||null;
+        video_url=f.video_url||null;
+        pending=!!f.pending; op_name=f.op_name||null;
+      }else{
+        content=data.content||data.output||'';
+        image_url=data.image_url||data.url||null;
+        video_url=data.video_url||null;
+        pending=!!data.pending; op_name=data.op_name||null;
+      }
+      return {content,image_url,video_url,pending,op_name};
     }catch{ /* rơi xuống text */ }
   }
 
   const text=await res.text();
-  const content = renderStreamLikeText(text, null, false);
-  return {content, image_url:null};
+  const parsed = renderStreamLikeText(text, null, false);
+  return parsed;
 }
 
-/* FIX: Gom NDJSON/text, BỎ begin/end, ưu tiên các field nội dung */
+/* Gom NDJSON/text, bắt image_url/video_url + pending/op_name */
 function renderStreamLikeText(text, targetNode=null, markThought=false){
   const lines=text.split(/\r?\n/);
-  let acc='';
+  let acc=''; let img=null; let vid=null; let pending=false; let op_name=null;
+
   for(const raw of lines){
     if(!raw) continue;
     let line = raw.replace(/^\s*data\s*:\s?/, '');
@@ -627,7 +877,15 @@ function renderStreamLikeText(text, targetNode=null, markThought=false){
     if(line[0]==='{' || line[0]==='['){
       try{
         const obj=JSON.parse(line);
-        if(obj.type==='begin' || obj.type==='end') continue; /* FIX */
+        if(obj.type==='begin' || obj.type==='end') continue;
+
+        if(!img && obj.image_url) img = obj.image_url;
+        if(!vid && obj.video_url) vid = obj.video_url;
+
+        if(obj.pending && obj.op_name && !pending){
+          pending=true; op_name=obj.op_name;
+        }
+
         const chunk = (typeof obj.delta==='string' && obj.delta)
                    || (typeof obj.content==='string' && obj.content)
                    || (typeof obj.output==='string' && obj.output)
@@ -637,17 +895,49 @@ function renderStreamLikeText(text, targetNode=null, markThought=false){
                    || '';
         if(chunk) acc+=chunk;
         continue;
-      }catch{
-        // fall back text
-      }
+      }catch{}
     }
     acc += line + '\n';
   }
-  if(markThought && targetNode){
-    setStatusChip(targetNode,'thought');
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc);
+
+  if(targetNode){
+    if(markThought) setStatusChip(targetNode,'thought');
+    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc||'');
+
+    if(img){
+      const w=document.createElement('div'); w.className='content';
+      w.innerHTML=`<a href="${encodeURI(img)}" target="_blank" rel="noopener"><img src="${encodeURI(img)}" alt="Image from AI"></a>`;
+      chatEl.appendChild(w);
+    }
+    if(vid){
+      const v=document.createElement('div'); v.className='content';
+      const type = /\.webm$/i.test(vid) ? 'video/webm' : 'video/mp4';
+      v.innerHTML=`<video controls playsinline><source src="${encodeURI(vid)}" type="${type}"></video>`;
+      chatEl.appendChild(v);
+    }
+
+    if(pending && op_name){
+      const typing=document.createElement('div');
+      typing.className='content typing';
+      typing.textContent='Generating video…';
+      targetNode.after(typing);
+      pollVideoUntilReady(op_name, (videoUrl, err)=>{
+        typing.remove();
+        if(err || !videoUrl){
+          const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
+          eDiv.textContent='Video failed. Please try again.';
+          chatEl.appendChild(eDiv);
+          return;
+        }
+        const v=document.createElement('div'); v.className='content';
+        const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
+        v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
+        chatEl.appendChild(v);
+      });
+    }
   }
-  return acc;
+
+  return {content:acc, image_url:img, video_url:vid, pending, op_name};
 }
 
 /* Scroll-to-bottom button */
