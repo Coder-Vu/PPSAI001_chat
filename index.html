@@ -1,961 +1,1598 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>PPS AI Chat</title>
-  <link rel="icon" href="favicon.png" type="image/png">
-  <link rel="apple-touch-icon" href="favicon.png">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>PPS AI Agent</title>
 
-  <!-- Markdown renderer + Sanitizer -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
+    <link rel="icon" href="favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="favicon.png" />
 
-  <style>
-    :root{
-      --bg:#f3f4f6; --brand:#003366; --brand-2:#0055aa; --text:#0f172a; --muted:#64748b;
-      --bubble-user:#f1f5f9; --bubble-bot:#fff; --bubble-border:#e2e8f0;
-      --radius:12px; --footer-h:64px;
-      --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-                 Roboto, "Helvetica Neue", Arial, sans-serif,
-                 "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%; margin:0; -webkit-text-size-adjust:100%}
-    body{
-      background:var(--bg); color:var(--text); font-family:var(--ui-font);
-      display:flex; justify-content:center; align-items:stretch;
-      min-height:100svh; overflow-x:hidden;
-    }
-    input, textarea, button { font-family: var(--ui-font); }
-    .hidden{display:none!important}
+    <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
 
-    /* Login */
-    .login-wrapper{
-      width:100%; max-width:400px; background:#fff; padding:32px; border-radius:var(--radius);
-      box-shadow:0 4px 14px rgba(0,0,0,.08); text-align:center; margin:16px;
-    }
-    .login-wrapper h2{ margin-bottom:16px; font-size:clamp(18px,4.5vw,24px); line-height:1.2 }
-    .login-wrapper input{
-      width:100%; padding:12px 14px; margin-bottom:8px; border:1px solid var(--bubble-border); border-radius:var(--radius);
-      font-size:16px;
-    }
-    .login-wrapper small{display:block; color:var(--muted); font-size:12px; margin-bottom:12px}
-    .login-wrapper button{
-      width:100%; padding:12px 14px; border-radius:var(--radius);
-      border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; font-size:15px
-    }
-    .login-wrapper button:hover{background:var(--brand-2); border-color:var(--brand-2)}
+    <style>
+      /* ===================== Attachments (upload image) ===================== */
+      .attach-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid var(--bubble-border);
+        background: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .attach-btn:hover { background: #f3f4f6; }
+      .attach-btn svg { width: 18px; height: 18px; }
 
-    /* Chat wrapper */
-    .chat-wrapper{
-      width:100%; max-width:920px; height:100svh;
-      background:#fff; border:1px solid var(--bubble-border); border-radius:var(--radius);
-      display:flex; flex-direction:column; box-shadow:0 4px 14px rgba(0,0,0,.08);
-      overflow:hidden; contain:layout size style;
-    }
-    header{
-      position:sticky; top:0; z-index:5;
-      display:flex; justify-content:space-between; align-items:center;
-      padding:8px 12px; border-bottom:1px solid var(--bubble-border); background:#fff;
-    }
-    header .title{ text-align:center; flex:1 }
-    header img{ height:clamp(32px,6vw,64px); width:auto; object-fit:contain; display:block; margin:0 auto 4px }
-    header h1{ margin:0; font-size:clamp(16px,4.5vw,20px); font-weight:700 }
-    header p{ margin:4px 0 0; font-size:clamp(13px,3.8vw,16px); color:#555 }
+      :root {
+        --bg: #f3f4f6;
+        --brand: #003366;
+        --brand-2: #0055aa;
+        --text: #0f172a;
+        --muted: #64748b;
+        --bubble-user: #f1f5f9;
+        --bubble-bot: #fff;
+        --bubble-border: #e2e8f0;
+        --radius: 12px;
+        --footer-h: 64px;
+        --ui-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+          "Segoe UI Emoji", "Segoe UI Symbol";
+        --media-max: 420px;
+        --thumb-size: 96px;
+      }
 
-    /* Kebab menu 3 chấm + Sign out */
-    header .controls{ display:flex; gap:10px; align-items:center }
-    .kebab{ position:relative; display:inline-flex; align-items:center; justify-content:center;
-      width:36px; height:36px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; }
-    .kebab:hover{ background:#f8fafc }
-    .kebab svg{ width:18px; height:18px }
-    .kebab-menu{
-      position:absolute; top:44px; right:0; background:#fff; border:1px solid #e5e7eb; border-radius:8px;
-      box-shadow:0 8px 20px rgba(0,0,0,.12); min-width:160px; padding:8px; display:none; z-index:10;
-    }
-    .kebab-menu.show{ display:block }
-    .kebab-item{
-      width:100%; text-align:left; background:#fff; border:1px solid transparent; border-radius:8px;
-      padding:8px 10px; cursor:pointer; font-size:14px; color:#111827;
-    }
-    .kebab-item:hover{ background:#f3f4f6; }
+      /* Khi CÓ thumbnail: text nằm bên dưới ảnh, tăng padding-top + min-height */
+      .prompt-wrap.has-thumb #prompt {
+        padding-top: calc(var(--thumb-size) + 28px);
+        padding-left: 12px;
+        min-height: calc(var(--thumb-size) + 56px);
+      }
+      .prompt-wrap.has-thumb #prompt::placeholder { opacity: .9; }
 
-    #chat{
-      flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
-      padding:12px 16px; display:flex; flex-direction:column; gap:12px;
-      scroll-behavior:smooth; background:#fff;
-      padding-bottom:calc(var(--footer-h) + env(safe-area-inset-bottom,0px) + 12px);
-      overscroll-behavior:contain;
-    }
-    #chat::-webkit-scrollbar{width:6px}
-    #chat::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2); border-radius:4px}
-    #chat::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.35)}
+      /* thumbnail card */
+      .thumb-box{
+        position:absolute;
+        top:10px;
+        left:12px;
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        z-index:2;
+        background:transparent;
+        padding:0;
+        border-radius:12px;
+      }
+      .thumb-box img{
+        width:var(--thumb-size);
+        height:var(--thumb-size);
+        border-radius:12px;
+        object-fit:cover;
+        border:1px solid var(--bubble-border);
+        box-shadow:0 2px 6px rgba(0,0,0,.08);
+      }
 
-    .msg{ max-width:75%; padding:10px 14px; border-radius:var(--radius); line-height:1.6;
-          word-wrap:break-word; white-space:normal; animation:fadeIn .18s ease;
-          display:flex; align-items:flex-start; gap:10px; position:relative }
-    .msg.assistant{ align-self:stretch; max-width:100%; background:var(--bubble-bot) }
-    .msg.user{ align-self:flex-end; background:var(--bubble-user); justify-content:flex-end }
-    .avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0 } /* UPDATED: bỏ border để hòa nền */
+      /* [FIX] Gom nút X và nút Replace (attach) vào cùng một cụm ở mép phải thumbnail */
+      .thumb-actions{
+        position:absolute;
+        top:-6px;               /* căn chuẩn đỉnh ảnh */
+        right:-6px;             /* ôm mép phải ảnh */
+        display:flex;
+        gap:6px;
+        z-index: 5;
+      }
+      .thumb-remove{
+        width:22px;height:22px;
+        border-radius:999px;
+        border:1px solid rgba(0,0,0,.15);
+        background:rgba(17,24,39,.95);
+        color:#fff;
+        cursor:pointer;
+        opacity:0; transform:translateY(-2px);
+        transition:opacity .15s ease, transform .15s ease;
+      }
 
-    .content a{ color:#0ea5e9; text-decoration:underline }
-    .content img{ max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0 }
+/* [ADD] Nút Replace trong cụm actions, cùng kích thước với nút X và ẩn/hiện khi hover */
+.thumb-action-btn{
+  width:22px; height:22px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.15);
+  background:rgba(17,24,39,.95);
+  color:#fff;
+  cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  opacity:0; transform:translateY(-2px);
+  transition:opacity .15s ease, transform .15s ease;
+}
 
-    /* UPDATED: hỗ trợ video hiển thị đẹp như ảnh */
-    .content video{
-      max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border); margin:8px 0;
-      display:block;
-    }
+/* Hover đồng bộ cho cả Replace và X */
+.thumb-box:hover .thumb-action-btn,
+.thumb-box:hover .thumb-remove{
+  opacity:1; transform:translateY(0);
+}
 
-    .content table{ border-collapse:collapse; width:100%; margin:8px 0 }
-    .content th,.content td{ border:1px solid var(--bubble-border); padding:6px 8px; text-align:left }
-    .content code{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
-    .content pre{ background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto }
+/* Thiết bị cảm ứng (không có hover): luôn hiện */
+@media (hover:none){
+  .thumb-action-btn,
+  .thumb-remove {
+    opacity: 1;
+    transform: none;
+  }
+}
 
-    /* UPDATED: Status “Thinking…/Thought” (to hơn + nhấp nháy) */
-    .status-chip{
-      position:absolute; left:42px; top:-12px;
-      font-size:13px; color:var(--muted); user-select:none; pointer-events:none;
-      display:inline-flex; gap:6px; align-items:center;
-    }
-    .pulse { animation:pulse 1.2s ease-in-out infinite }
-    @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
+      /* Nút upload trong ô nhập: mặc định chìm */
+      .attach-btn.in-input{
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+        color: #94a3b8;
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        z-index: 2;
+        width: 36px;
+        height: 36px;
+      }
+      .attach-btn.in-input svg{ stroke: currentColor; }
+      .attach-btn.in-input:hover,
+      .attach-btn.in-input:focus-visible{
+        background:#fff;
+        border-color:transparent;
+        box-shadow:0 0 0 2px #e5e7eb;
+        color:#0f172a;
+      }
+      .attach-btn.in-input:active{ box-shadow:0 0 0 2px #d1d5db; }
+      .attach-btn.in-input:disabled{ opacity:.45; box-shadow:none; pointer-events:none; }
 
-    @keyframes fadeIn{ from{opacity:.0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
+      /* [FIX] Khi có thumbnail: ẩn nút upload trong ô nhập để tránh trùng, 
+   	dùng nút “Replace” nằm trên ảnh thumbnail thay thế */
 
-    footer{
-      position:fixed; left:50%; transform:translateX(-50%);
-      width:min(920px, 100%); bottom:0; z-index:6;
-      border-top:1px solid var(--bubble-border); background:#fff;
-      padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));
-    }
-    .footer-inner{ display:flex; gap:8px; align-items:flex-end; position:relative }
-    #prompt{
-      /* chừa chỗ cho nút gửi tròn 44px trong ô */
-      flex:1; padding:12px 64px 12px 12px;
-      border:1px solid var(--bubble-border); border-radius:12px;
-      outline:none; font-size:16px;
-      resize:none; overflow-y:hidden; line-height:1.5; min-height:48px; max-height:40vh;
-      background:#fff;
-    }
-    #prompt::placeholder{ font-size:13px; color:#9aa4b2 }
+      .prompt-wrap.has-thumb .attach-btn.in-input{
+	display: none !important;
+      }
+      /* Hover nhẹ khi đứng gần thumbnail */
+      .prompt-wrap.has-thumb .attach-btn.in-input:hover,
+      .prompt-wrap.has-thumb .attach-btn.in-input:focus-visible{
+        box-shadow: 0 0 0 2px rgba(255,255,255,.6);
+      }
 
-    /* Ẩn nút Send cũ (giữ DOM) */
-    #sendBtn{ display:none !important; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; -webkit-text-size-adjust: 100%; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--ui-font);
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        min-height: 100svh;
+        overflow-x: hidden;
+      }
+      input, textarea, button { font-family: var(--ui-font); }
+      .hidden { display: none !important; }
 
-    /* UPDATED: nút gửi tròn – canh giữa mép phải */
-    .inbox-send{
-      position:absolute; right:12px; top:50%; transform:translateY(-50%); width:44px; height:44px;
-      border-radius:999px; background:#000; color:#fff; border:1px solid #000;
-      display:none; align-items:center; justify-content:center; cursor:pointer;
-      box-shadow:0 2px 8px rgba(0,0,0,.10);
-    }
-    .inbox-send.show{ display:inline-flex }
-    .inbox-send:disabled{ opacity:.5; cursor:not-allowed }
-    .inbox-send svg{ width:22px; height:22px; display:block }
+      /* ===================== Login ===================== */
+      .login-wrapper {
+        width: 100%;
+        max-width: 400px;
+        background: #fff;
+        padding: 32px;
+        border-radius: var(--radius);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        text-align: center;
+        margin: 16px;
+      }
+      .login-wrapper h2 { margin-bottom: 16px; font-size: clamp(18px, 4.5vw, 24px); line-height: 1.2; }
+      .login-wrapper input {
+        width: 100%;
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        border: 1px solid var(--bubble-border);
+        border-radius: var(--radius);
+        font-size: 16px;
+      }
+      .login-wrapper small { display:block; color:var(--muted); font-size:12px; margin-bottom:12px; }
+      .login-wrapper button {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: var(--radius);
+        border: 1px solid var(--brand);
+        background: var(--brand);
+        color: #fff;
+        cursor: pointer;
+        font-size: 15px;
+      }
+      .login-wrapper button:hover { background: var(--brand-2); border-color: var(--brand-2); }
 
-    #scrollBtn{
-      position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
-      background:#fff; color:#000; border:1px solid #e5e7eb;
-      border-radius:50%; width:48px; height:48px; cursor:pointer;
-      box-shadow:0 2px 6px rgba(0,0,0,.15);
-      display:flex; align-items:center; justify-content:center;
-      opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;
-      z-index:7;
-    }
-    #scrollBtn svg{ width:22px; height:22px; display:block }
-    #scrollBtn.show{ opacity:1; visibility:visible }
+      /* ===================== Chat wrapper ===================== */
+      .chat-wrapper {
+        width: 100%;
+        max-width: 920px;
+        height: 100svh;
+        background: #fff;
+        border: 1px solid var(--bubble-border);
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        contain: layout size style;
+      }
 
-    body.kbd-open{ overflow:hidden }
-    @media (max-width:600px){
-      .chat-wrapper{ max-width:100%; height:100svh; border-radius:0 }
-      header img{ height:36px }
-    }
-  </style>
-</head>
-<body>
+      header {
+        position: sticky; top: 0; z-index: 5;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--bubble-border);
+        background: #fff;
+      }
+      header .title { text-align: center; flex: 1; }
+      header img { height: clamp(32px, 6vw, 64px); width: auto; object-fit: contain; display:block; margin:0 auto 4px; }
+      header h1 { margin: 0; font-size: clamp(16px, 4.5vw, 20px); font-weight: 700; }
+      header p { margin: 4px 0 0; font-size: clamp(13px, 3.8vw, 16px); color: #555; }
 
-<!-- Login -->
-<div id="login" class="login-wrapper">
-  <h2>🔑 Please Sign in</h2>
-  <input id="accessInput" type="password" placeholder="Enter Access Code" />
-  <small>Please enter the Access code provided by the admin</small>
-  <button id="loginBtn">Enter</button>
-  <p id="loginMsg" style="color:red; display:none; margin-top:8px;">Invalid Access Code</p>
-</div>
+      /* Kebab */
+      header .controls { display:flex; gap:10px; align-items:center; }
+      .kebab { position:relative; display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; }
+      .kebab:hover { background:#f8fafc; }
+      .kebab svg { width:18px; height:18px; }
+      .kebab-menu {
+        position:absolute; top:44px; right:0; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,.12);
+        min-width:160px; padding:8px; display:none; z-index:10;
+      }
+      .kebab-menu.show { display:block; }
+      .kebab-item { width:100%; text-align:left; background:#fff; border:1px solid transparent; border-radius:8px; padding:8px 10px; cursor:pointer; font-size:14px; color:#111827; }
+      .kebab-item:hover { background:#f3f4f6; }
 
-<!-- Chat UI -->
-<div id="chatUI" class="chat-wrapper hidden">
-  <header>
-    <div class="title">
-      <img src="logo.png" alt="PPS Logo">
-      <h1>Hi there! 👋</h1>
-      <p>I am the AI Agent of PPS, here to support you 24/7</p>
+      /* ===================== Chat area ===================== */
+      #chat {
+        flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+        padding: 12px 16px; display:flex; flex-direction:column; gap:12px; scroll-behavior: smooth; background:#fff;
+        padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom, 0px) + 12px);
+        overscroll-behavior: contain;
+      }
+      #chat::-webkit-scrollbar { width:6px; }
+      #chat::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); border-radius:4px; }
+      #chat::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.35); }
+
+      .msg {
+        max-width: 75%;
+        padding: 10px 14px;
+        border-radius: var(--radius);
+        line-height: 1.6;
+        word-wrap: break-word;
+        white-space: normal;
+        animation: fadeIn 0.18s ease;
+        display: flex; align-items: flex-start; gap:10px; position: relative;
+      }
+      .msg.assistant { align-self: stretch; max-width: 100%; background: var(--bubble-bot); }
+      .msg.user { align-self: flex-end; background: var(--bubble-user); justify-content: flex-end; }
+      .avatar { width:28px; height:28px; border-radius:50%; flex-shrink:0; }
+
+      .content a { color:#0ea5e9; text-decoration: underline; }
+      .content img, .content video {
+        max-width:100%; height:auto; border-radius:8px; border:1px solid var(--bubble-border);
+        margin:8px auto; display:block;
+      }
+      .content table { border-collapse: collapse; width:100%; margin:8px 0; }
+      .content th, .content td { border:1px solid var(--bubble-border); padding:6px 8px; text-align:left; }
+      .content code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .content pre { background:#f8fafc; border:1px solid var(--bubble-border); border-radius:8px; padding:10px; overflow:auto; }
+
+      .status-chip {
+        position:absolute; left:42px; top:-12px; font-size:13px; color:var(--muted); user-select:none; pointer-events:none; display:inline-flex; gap:6px; align-items:center;
+      }
+      .pulse { animation: pulse 1.2s ease-in-out infinite; }
+      @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
+      @keyframes fadeIn { from{opacity:0; transform:translateY(2px)} to{opacity:1; transform:translateY(0)} }
+
+      /* ===================== Footer (composer) ===================== */
+      footer {
+        position: fixed; left:50%; transform:translateX(-50%);
+        width: min(920px, 100%);
+        bottom: 0; z-index: 6;
+        border-top: 1px solid var(--bubble-border);
+        background: #fff;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      }
+      .footer-inner {
+        display:flex; gap:8px; align-items:flex-end; position:relative;
+      }
+
+      /* [FIX] Bắt input luôn full width kiểu ChatGPT */
+      .prompt-wrap{
+        position: relative;
+        flex: 1 1 auto;
+        min-width: 0;          /* tránh bị flex gây “co” bất thường */
+      }
+
+      #prompt {
+        display:block;         /* [FIX] */
+        width:100%;            /* [FIX] */
+        padding: 12px 64px 12px 48px; /* chừa 48px trái cho nút upload, 64px phải cho nút gửi */
+        border: 1px solid var(--bubble-border);
+        border-radius: 12px;
+        outline: none;
+        font-size: 16px;
+        resize: none;
+        overflow-y: hidden;
+        line-height: 1.5;
+        min-height: 56px;
+        max-height: 40vh;
+        background: #fff;
+        transition: padding .15s ease, height .15s ease;
+      }
+      #prompt::placeholder { font-size: 13px; color: #9aa4b2; }
+
+      #sendBtn { display: none !important; }
+
+      .inbox-send{
+        position:absolute; right:10px; top:50%; transform:translateY(-50%);
+        width:40px; height:40px; border-radius:999px; background:#000; color:#fff; border:1px solid #000;
+        display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.1);
+      }
+      .inbox-send.show{ display:inline-flex; }
+      .inbox-send:disabled{ opacity:.5; cursor:not-allowed; }
+
+      /* Scroll-to-bottom */
+      #scrollBtn{
+        position: fixed; bottom: 76px; left:50%; transform:translateX(-50%);
+        background:#fff; color:#000; border:1px solid #e5e7eb; border-radius:50%;
+        width:40px; height:40px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.15);
+        display:flex; align-items:center; justify-content:center;
+        opacity:0; visibility:hidden; transition:opacity .25s ease, visibility .25s ease; z-index:7;
+      }
+      #scrollBtn.show{ opacity:1; visibility:visible; }
+
+      /* Overlay Save on media */
+      .media-wrap { position:relative; display:block; margin:8px auto; width:min(var(--media-max), 90%); }
+      .media-save{
+        position:absolute; top:8px; right:8px; padding:6px 10px; font-size:13px; border-radius:999px;
+        border:1px solid rgba(0,0,0,.15); background:rgba(17,24,39,.9); color:#fff; cursor:pointer; user-select:none; backdrop-filter: blur(4px); z-index:1;
+        opacity:0; visibility:hidden; transform:translateY(-2px); transition:opacity .2s ease, visibility .2s ease, transform .2s ease;
+      }
+      .media-wrap:hover .media-save{ opacity:1; visibility:visible; transform:translateY(0); }
+      .media-save:disabled{ opacity:.6; cursor:not-allowed; }
+      @media (hover:none){ .media-save{ opacity:1 !important; visibility:visible !important; transform:none !important; } }
+      .content .media-wrap a{ display:block; }
+      .content .media-wrap img, .content .media-wrap video{ display:block; width:100%; height:auto; }
+
+      body.kbd-open { overflow: hidden; }
+      @media (max-width: 600px) {
+        .chat-wrapper { max-width:100%; height:100svh; border-radius:0; }
+        header img { height:36px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Login -->
+    <div id="login" class="login-wrapper">
+      <h2>🔑 Please Sign in</h2>
+      <input id="accessInput" type="password" placeholder="Enter Access Code" />
+      <small>Please enter the Access code provided by the admin</small>
+      <button id="loginBtn">Enter</button>
+      <p id="loginMsg" style="color: red; display: none; margin-top: 8px">
+        Invalid Access Code
+      </p>
     </div>
-    <div class="controls">
-      <div class="kebab" id="kebabBtn" aria-label="More">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <circle cx="6" cy="12" r="2"></circle>
-          <circle cx="12" cy="12" r="2"></circle>
-          <circle cx="18" cy="12" r="2"></circle>
-        </svg>
-        <div class="kebab-menu" id="kebabMenu">
-          <button class="kebab-item" id="kebabSignOut">Sign out</button>
+
+    <!-- Chat UI -->
+    <div id="chatUI" class="chat-wrapper hidden">
+      <header>
+        <div class="title">
+          <img src="logo.png" alt="PPS Logo" />
+          <h1>Hi there! 👋</h1>
+          <p>I am the AI Agent of PPS, here to support you 24/7</p>
         </div>
-      </div>
-      <button class="signout hidden" id="signoutBtn">Sign out</button>
-    </div>
-  </header>
 
-  <div id="chat"></div>
+        <div class="controls">
+          <div class="kebab" id="kebabBtn" aria-label="More">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="6" cy="12" r="2"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+              <circle cx="18" cy="12" r="2"></circle>
+            </svg>
+            <div class="kebab-menu" id="kebabMenu">
+              <button class="kebab-item" id="kebabSignOut">Sign out</button>
+              <button class="kebab-item" id="kebabClearHistory">Clear history</button>
+            </div>
+          </div>
+          <button class="signout hidden" id="signoutBtn">Sign out</button>
+        </div>
+      </header>
 
-  <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </button>
+      <div id="chat"></div>
 
-  <footer id="appFooter">
-    <div class="footer-inner">
-      <textarea id="prompt" rows="1" placeholder="Type to search, analyze, or request..."></textarea>
-      <!-- Nút gửi tròn trong ô nhập -->
-      <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 19V6"></path>
-          <path d="M5 13l7-7 7 7"></path>
+      <button id="scrollBtn" aria-label="Scroll to bottom" title="Scroll to bottom">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <button id="sendBtn">Send</button> <!-- giữ DOM, ẩn bằng CSS -->
+
+      <!-- Composer -->
+      <footer id="appFooter">
+        <div class="footer-inner">
+
+          <div id="promptWrap" class="prompt-wrap">
+            <!-- nút upload: khi có thumbnail sẽ biến thành nút Replace đứng cạnh X -->
+            <button
+              id="attachBtn"
+              class="attach-btn in-input"
+              title="Attach/Replace image"
+              aria-label="Attach image"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.5"/>
+              </svg>
+            </button>
+            <input id="fileInput" type="file" accept="image/*" class="hidden" multiple />
+
+            <!-- thumbnail -->
+<!-- thumbnail (multi-image will be rendered by renderThumbs()) -->
+<div id="thumbBox" class="thumb-box hidden"></div>
+
+            <textarea
+              id="prompt"
+              rows="1"
+              placeholder="Type to search, analyze, or request..."
+            ></textarea>
+          </div>
+
+          <button id="inboxSend" class="inbox-send" title="Send" aria-label="Send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V6"></path>
+              <path d="M5 13l7-7 7 7"></path>
+            </svg>
+          </button>
+
+          <button id="sendBtn">Send</button>
+        </div>
+      </footer>
     </div>
-  </footer>
-</div>
 
-<script>
-/* Footer resize, keyboard handling */
-(function(){
-  const footer=document.getElementById('appFooter');
-  const chat=document.getElementById('chat');
-  const wrap=document.querySelector('.chat-wrapper');
-  function applyFooterHeight(){
-    const h=footer?.offsetHeight||64;
-    document.documentElement.style.setProperty('--footer-h',h+'px');
-  }
-  applyFooterHeight();
-  window.addEventListener('resize',applyFooterHeight);
-  if(footer&&'ResizeObserver'in window)new ResizeObserver(applyFooterHeight).observe(footer);
-  function setViewportBindings(){
-    if(!window.visualViewport)return;
-    const vv=window.visualViewport;
-    const setHeights=()=>{
-      if(wrap)wrap.style.height=vv.height+'px';
-      const kb=Math.max(0,(window.innerHeight-vv.height-vv.offsetTop));
-      footer.style.bottom=kb+'px';
-      if(kb>0)document.body.classList.add('kbd-open');else document.body.classList.remove('kbd-open');
-      chat.scrollTop=chat.scrollHeight;
-    };
-    vv.addEventListener('resize',setHeights); vv.addEventListener('scroll',setHeights); setHeights();
-  }
-  setViewportBindings();
-  const input=document.getElementById('prompt');
-  input.addEventListener('focus',()=>{setTimeout(()=>{window.scrollTo(0,0);chat.scrollTop=chat.scrollHeight;},120)});
-  input.addEventListener('blur',()=>{document.body.classList.remove('kbd-open');});
-})();
-</script>
+    <!-- Footer resize -->
+    <script>
+      (function () {
+        const footer = document.getElementById("appFooter");
+        const chat = document.getElementById("chat");
+        const wrap = document.querySelector(".chat-wrapper");
 
-<script>
-/* Login */
-const AUTO_LOGOUT_MS=30*60*1000;let inactivityTimer;
-const accessEl=document.getElementById('accessInput');
-const loginBtn=document.getElementById('loginBtn');
-const loginBox=document.getElementById('login');
-const chatBox=document.getElementById('chatUI');
-const loginMsg=document.getElementById('loginMsg');
-const signoutBtn=document.getElementById('signoutBtn');
+        function applyFooterHeight() {
+          const h = footer?.offsetHeight || 64;
+          document.documentElement.style.setProperty("--footer-h", h + "px");
+        }
+        applyFooterHeight();
+        addEventListener("resize", applyFooterHeight);
+        if (footer && "ResizeObserver" in window) {
+          new ResizeObserver(applyFooterHeight).observe(footer);
+        }
 
-const kebabBtn=document.getElementById('kebabBtn');
-const kebabMenu=document.getElementById('kebabMenu');
-const kebabSignOut=document.getElementById('kebabSignOut');
+        function setViewportBindings() {
+          if (!window.visualViewport) return;
+          const vv = window.visualViewport;
+          const setHeights = () => {
+            if (wrap) wrap.style.height = vv.height + "px";
+            const kb = Math.max(0, innerHeight - vv.height - vv.offsetTop);
+            footer.style.bottom = kb + "px";
+            document.body.classList.toggle("kbd-open", kb > 0);
+            chat.scrollTop = chat.scrollHeight;
+          };
+          vv.addEventListener("resize", setHeights);
+          vv.addEventListener("scroll", setHeights);
+          setHeights();
+        }
+        setViewportBindings();
 
-function resetInactivityTimer(){clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{alert("Session timed out.");signOut();},AUTO_LOGOUT_MS);}
-function initInactivityListeners(){["click","keydown","mousemove","scroll","touchstart"].forEach(ev=>{document.addEventListener(ev,resetInactivityTimer,{passive:true});});resetInactivityTimer();}
-async function checkAccess(){
-  const val=accessEl.value.trim();if(!val){loginMsg.textContent='Please enter the Access code';loginMsg.style.display='block';return;}
-  loginBtn.disabled=true;const oldLabel=loginBtn.textContent;loginBtn.textContent='Verifying...';loginMsg.style.display='none';
-  try{
-    const res=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:val})});
-    if(res.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();accessEl.value='';}
-    else{let reason='Invalid Access Code';try{const j=await res.json();if(j?.error)reason=j.error;}catch{}loginMsg.textContent=reason;loginMsg.style.display='block';}
-  }catch(e){loginMsg.textContent='Unable to connect. Please try again later.';loginMsg.style.display='block';}
-  finally{loginBtn.disabled=false;loginBtn.textContent=oldLabel;}
-}
-loginBtn.addEventListener('click',checkAccess);
-accessEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkAccess();}});
-async function signOut(){
-  try{await fetch("/api/logout",{method:"POST"});}catch{}
-  chatBox.classList.add('hidden');loginBox.classList.remove('hidden');clearTimeout(inactivityTimer);
-  localStorage.removeItem('ppsai_session_id');localStorage.removeItem('ppsai_messages');
-  const chatEl=document.getElementById('chat');if(chatEl)chatEl.innerHTML='';
-}
-signoutBtn.addEventListener('click',signOut);
-(async()=>{const r=await fetch("/api/session").catch(()=>null);if(r&&r.ok){loginBox.classList.add('hidden');chatBox.classList.remove('hidden');initInactivityListeners();}})();
-
-kebabBtn?.addEventListener('click', (e)=>{ e.stopPropagation(); kebabMenu.classList.toggle('show'); });
-document.addEventListener('click', (e)=>{ if(!kebabBtn.contains(e.target)) kebabMenu.classList.remove('show'); });
-kebabSignOut?.addEventListener('click', ()=>{ kebabMenu.classList.remove('show'); signOut(); });
-</script>
-
-<script>
-/* Chat + Streaming vững (UTF-8, SSE/NDJSON, throttle 33ms) */
-const chatEl=document.getElementById('chat');
-const inputEl=document.getElementById('prompt');
-const btnEl=document.getElementById('sendBtn');
-
-const SESSION_KEY='ppsai_session_id';
-let sessionId=localStorage.getItem(SESSION_KEY);
-if(!sessionId){
-  sessionId=(crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString();
-  localStorage.setItem(SESSION_KEY,sessionId);
-}
-
-/* Lịch sử có TTL & giới hạn */
-const MSGS_KEY='ppsai_messages';
-const HISTORY_TTL_DAYS=30,HISTORY_MAX_ITEMS=200,HISTORY_MAX_BYTES=800000;
-function loadMessages(){try{return JSON.parse(localStorage.getItem(MSGS_KEY)||'[]');}catch{return[]}}
-function saveMessages(arr){
-  const now=Date.now(),ttlMs=HISTORY_TTL_DAYS*24*60*60*1000;
-  let pruned=arr.filter(m=>!m.ts||(now-m.ts)<=ttlMs);
-  if(pruned.length>HISTORY_MAX_ITEMS)pruned=pruned.slice(pruned.length-HISTORY_MAX_ITEMS);
-  let json=JSON.stringify(pruned);
-  while(json.length>HISTORY_MAX_BYTES&&pruned.length>1){pruned.shift();json=JSON.stringify(pruned);}
-  localStorage.setItem(MSGS_KEY,json);
-}
-let messages=loadMessages();renderHistory(messages);
-
-/* Nút gửi tròn trong ô nhập (chỉ hiện khi có nội dung) */
-const inboxSend=document.getElementById('inboxSend');
-function toggleInboxSend(){
-  const hasText=!!inputEl.value.trim();
-  inboxSend.classList.toggle('show', hasText);
-  inboxSend.disabled=!hasText;
-}
-inputEl.addEventListener('input', toggleInboxSend);
-toggleInboxSend();
-
-btnEl.addEventListener('click',onSend);
-inboxSend.addEventListener('click',onSend);
-
-/* Textarea: Enter gửi, Shift+Enter xuống dòng + auto-resize */
-inputEl.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();onSend();}
-});
-function autosizeTextarea(el){
-  el.style.height='auto';
-  const max=Math.round(window.innerHeight*0.40);
-  const h=Math.min(el.scrollHeight,max);
-  el.style.height=h+'px';
-  el.style.overflowY=(el.scrollHeight>max)?'auto':'hidden';
-}
-inputEl.addEventListener('input',()=>autosizeTextarea(inputEl));
-window.addEventListener('resize',()=>autosizeTextarea(inputEl));
-autosizeTextarea(inputEl);
-
-/* Mở link trong tab mới */
-chatEl.addEventListener('click',e=>{
-  const a=e.target.closest('a'); if(!a) return;
-  const href=a.getAttribute('href'); if(!href||href.startsWith('#')) return;
-  e.preventDefault(); a.setAttribute('rel','noopener'); a.setAttribute('target','_blank');
-  try{ window.open(a.href,'_blank','noopener,noreferrer'); }catch{ a.click(); }
-});
-
-/* Markdown render */
-marked.setOptions({gfm:true,breaks:true,headerIds:false,mangle:false});
-function renderMarkdown(md){
-  let html=marked.parse(md||'');
-  html=html.replace(/<a /g,'<a target="_blank" rel="noopener" ');
-  return DOMPurify.sanitize(html);
-}
-
-/* Status chip trên cùng icon AI */
-function setStatusChip(targetNode, typeOrText){
-  if(!targetNode) return;
-  let chip=targetNode.querySelector('.status-chip');
-  if(!chip){
-    chip=document.createElement('div');
-    chip.className='status-chip';
-    targetNode.appendChild(chip);
-  }
-  if(typeOrText==='thinking'){
-    chip.innerHTML = `<span class="pulse">Thinking…</span>`;
-  }else if(typeOrText==='thought'){
-    chip.innerHTML = `<span class="pulse">Thought</span>`;
-  }else{
-    chip.textContent='';
-  }
-}
-
-/* appendBubble trả về node để stream có thể cập nhật trực tiếp */
-/* UPDATED: nhận thêm videoUrl và render <video> */
-function appendBubble(text,role='assistant',imageUrl=null,videoUrl=null){
-  const d=document.createElement('div');
-  d.className='msg '+(role==='user'?'user':'assistant');
-
-  if(role==='assistant'){
-    const av=document.createElement('img'); 
-    av.src="assistant_icon_256.png"; /* icon trợ lý */
-    av.alt="Assistant"; av.className="avatar";
-    av.onerror=()=>{ av.replaceWith(document.createTextNode("🤖")); };
-    d.appendChild(av);
-    const chip=document.createElement('div'); chip.className='status-chip'; chip.textContent='';
-    d.appendChild(chip);
-  }
-
-  const content=document.createElement('div');
-  content.className='content';
-  content.innerHTML=renderMarkdown(text||'');
-  d.appendChild(content);
-  chatEl.appendChild(d);
-
-  if(imageUrl){
-    const w=document.createElement('div');
-    w.className='content';
-    w.innerHTML=`<a href="${encodeURI(imageUrl)}" target="_blank" rel="noopener">
-      <img src="${encodeURI(imageUrl)}" alt="Image from AI">
-    </a>`;
-    chatEl.appendChild(w);
-  }
-  if(videoUrl){
-    const v=document.createElement('div');
-    v.className='content';
-    const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-    v.innerHTML = `
-      <video controls playsinline>
-        <source src="${encodeURI(videoUrl)}" type="${type}">
-        Your browser does not support the video tag.
-      </video>`;
-    chatEl.appendChild(v);
-  }
-
-  chatEl.scrollTop=chatEl.scrollHeight;
-  return d;
-}
-function renderHistory(arr){
-  chatEl.innerHTML='';
-  const sorted=[...arr].sort((a,b)=>(a.ts||0)-(b.ts||0));
-  sorted.forEach(m=>appendBubble(m.content,m.role,m.image_url, m.video_url));
-}
-
-/* ---------- UPDATED: Poll helper cho video long-running ---------- */
-async function pollVideoUntilReady(opName, onDone, onProgress){
-  const poll = async () => {
-    try{
-      const r = await fetch(`/api/media?op=${encodeURIComponent(opName)}`, { method:'GET' });
-      const j = await r.json();
-      if (!r.ok || !j.ok) throw new Error(j?.error||'poll_error');
-      if (j.pending){
-        onProgress && onProgress(j);
-        setTimeout(poll, j.poll_after_ms || 5000);
-      }else{
-        onDone && onDone(j.video_url, null);
-      }
-    }catch(e){
-      onDone && onDone(null, e);
-    }
-  };
-  poll();
-}
-
-/* ---------- UPDATED: helper gọi media khi phát hiện directive trong stream ---------- */
-async function handleMediaDirective(media, targetNode){
-  if(!media || !media.type || !media.prompt) return;
-
-  const contentEl = targetNode.querySelector('.content');
-  const old = contentEl.innerHTML;
-  const waiting = media.type === 'image' ? '🖼️ Đang tạo ảnh…' : '🎬 Đang tạo video…';
-  contentEl.innerHTML = renderMarkdown(`${old ? old+'\n\n' : ''}${waiting}`);
-
-  try{
-    const r = await fetch('/api/media', {
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body: JSON.stringify({ type: media.type, prompt: media.prompt })
-    });
-    const j = await r.json();
-
-    if(!r.ok || !j.ok){
-      contentEl.innerHTML = renderMarkdown(`${old}\n\n⚠️ Tạo media lỗi: ${j?.error||'unknown'}`);
-      return;
-    }
-
-    if(j.image_url){
-      const wrap=document.createElement('div');
-      wrap.className='content';
-      wrap.innerHTML = `<img src="${j.image_url}" alt="Generated image" style="max-width:100%;border-radius:12px;margin-top:8px">`;
-      targetNode.appendChild(wrap);
-    }else if(j.video_url){
-      const wrap=document.createElement('div');
-      wrap.className='content';
-      const type = j.video_url.startsWith('data:video/webm') ? 'video/webm' : 'video/mp4';
-      wrap.innerHTML = `<video controls playsinline style="max-width:100%;border-radius:12px;margin-top:8px">
-                          <source src="${j.video_url}" type="${type}">
-                        </video>`;
-      targetNode.appendChild(wrap);
-    }else if(j.pending && j.op_name){
-      await new Promise((resolve)=>{
-        pollVideoUntilReady(j.op_name, (videoUrl, err)=>{
-          if(err || !videoUrl){
-            contentEl.innerHTML = renderMarkdown(`${old}\n\n⚠️ Tạo video lỗi.`);
-            resolve(); return;
-          }
-          const wrap=document.createElement('div');
-          wrap.className='content';
-          const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-          wrap.innerHTML = `<video controls playsinline style="max-width:100%;border-radius:12px;margin-top:8px">
-                              <source src="${videoUrl}" type="${type}">
-                            </video>`;
-          targetNode.appendChild(wrap);
-          resolve();
+        const input = document.getElementById("prompt");
+        input.addEventListener("focus", () => {
+          setTimeout(() => { scrollTo(0, 0); chat.scrollTop = chat.scrollHeight; }, 120);
         });
-      });
-    }
+        input.addEventListener("blur", () => { document.body.classList.remove("kbd-open"); });
+      })();
+    </script>
 
-    const doneMsg = media.type==='image' ? '🖼️ Đã tạo ảnh' : '🎬 Đã tạo video';
-    contentEl.innerHTML = renderMarkdown(`${old}\n\n${doneMsg}`);
-    chatEl.scrollTop = chatEl.scrollHeight;
+    <!-- Login + Session + Kebab -->
+    <script>
+      const AUTO_LOGOUT_MS = 30 * 60 * 1000;
+      let inactivityTimer;
 
-  }catch(e){
-    contentEl.innerHTML = renderMarkdown(`⚠️ Tạo media lỗi: ${String(e)}`);
-  }
-}
+      const accessEl = document.getElementById("accessInput");
+      const loginBtn = document.getElementById("loginBtn");
+      const loginBox = document.getElementById("login");
+      const chatBox = document.getElementById("chatUI");
+      const loginMsg = document.getElementById("loginMsg");
+      const signoutBtn = document.getElementById("signoutBtn");
 
-/* ========== STREAMING CORE (bắt _media trong SSE) ========== */
-async function streamFromWebhook(sessionId,message,targetNode){
-  const headers={
-    'Content-Type':'application/json',
-    'Accept':'text/event-stream, application/x-ndjson, application/json, text/plain; charset=utf-8'
-  };
-  const body=JSON.stringify({sessionId,chatInput:message});
-  const tries=[
-    {url:'/api/chat?stream=1',method:'POST'},
-    {url:'/api/chat/stream',method:'POST'},
-  ];
-  let res=null;
-  for(const t of tries){
-    try{const r=await fetch(t.url,{method:t.method,headers,body}); if(r.ok){res=r;break;}}catch{}
-  }
-  if(!res){
-    // Fallback non-stream một lần
-    const result=await sendToWebhook(sessionId,message);
-    if(!targetNode.querySelector('.content').innerHTML.trim()) setStatusChip(targetNode,'thought');
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(result.content||'(không có nội dung)');
+      const kebabBtn = document.getElementById("kebabBtn");
+      const kebabMenu = document.getElementById("kebabMenu");
+      const kebabSignOut = document.getElementById("kebabSignOut");
 
-    if(result.image_url){
-      const w=document.createElement('div');w.className='content';
-      w.innerHTML=`<a href="${encodeURI(result.image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(result.image_url)}" alt="Image from AI"></a>`;
-      chatEl.appendChild(w);
-    }
-
-    if(result.pending && result.op_name){
-      const typing=document.createElement('div');
-      typing.className='content typing';
-      typing.textContent='Generating video…';
-      targetNode.after(typing);
-
-      await new Promise((resolve)=>{
-        pollVideoUntilReady(result.op_name, (videoUrl, err)=>{
-          typing.remove();
-          if(err || !videoUrl){
-            const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
-            eDiv.textContent='Video failed. Please try again.';
-            chatEl.appendChild(eDiv);
-            resolve();
-            return;
-          }
-          const v=document.createElement('div'); v.className='content';
-          const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-          v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
-          chatEl.appendChild(v);
-          result.video_url = videoUrl;
-          resolve();
-        });
-      });
-    }
-    return result;
-  }
-
-  // ---- ĐỌC STREAM (SSE/NDJSON) ----
-  const reader=res.body.getReader();
-  const decoder=new TextDecoder('utf-8');
-  let buffer=''; let acc=''; let started=false;
-
-  let imageRendered=false, videoRendered=false;
-  let lastImageUrl=null, lastVideoUrl=null;
-
-  // throttle render 33ms
-  let needs=false;
-  const contentEl = targetNode.querySelector('.content');
-  const schedule=()=>{
-    if(needs) return;
-    needs=true; setTimeout(()=>{
-      contentEl.innerHTML = renderMarkdown(acc);
-      chatEl.scrollTop = chatEl.scrollHeight;
-      needs=false;
-    },33);
-  };
-
-  setStatusChip(targetNode,'thinking');
-
-  while(true){
-    const {done,value}=await reader.read();
-    if(value){ buffer += decoder.decode(value,{stream:!done}); }
-
-    let pos=0, nl;
-    while((nl = buffer.indexOf('\n', pos)) !== -1){
-      const raw = buffer.slice(pos, nl);
-      pos = nl + 1;
-
-      let line = raw;
-      if(!line) continue;
-
-      if(/^\s*data\s*:/.test(line)) line = line.replace(/^\s*data\s*:\s?/, '');
-
-      if(line[0]==='{' || line[0]==='['){
-        try{
-          const obj = JSON.parse(line);
-
-          // UPDATED: bắt directive _media từ GPT (không render JSON ra UI)
-          if (obj && obj._media && typeof obj._media === 'object') {
-            handleMediaDirective(obj._media, targetNode);
-            continue;
-          }
-
-          if(obj.type === 'begin' || obj.type === 'end') { /* skip */ }
-          else{
-            if(obj.pending && obj.op_name && !videoRendered){
-              const typing=document.createElement('div');
-              typing.className='content typing';
-              typing.textContent='Generating video…';
-              targetNode.after(typing);
-
-              pollVideoUntilReady(obj.op_name, (videoUrl, err)=>{
-                typing.remove();
-                if(err || !videoUrl){
-                  const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
-                  eDiv.textContent='Video failed. Please try again.';
-                  chatEl.appendChild(eDiv);
-                  return;
-                }
-                videoRendered=true;
-                lastVideoUrl=videoUrl;
-                const v=document.createElement('div'); v.className='content';
-                const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-                v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
-                chatEl.appendChild(v);
-              });
-            }
-
-            if(obj.image_url && !imageRendered){
-              imageRendered=true; lastImageUrl=obj.image_url;
-              const w=document.createElement('div'); w.className='content';
-              w.innerHTML=`<a href="${encodeURI(obj.image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(obj.image_url)}" alt="Image from AI"></a>`;
-              chatEl.appendChild(w);
-            }
-            if(obj.video_url && !videoRendered){
-              videoRendered=true; lastVideoUrl=obj.video_url;
-              const v=document.createElement('div'); v.className='content';
-              const type = /\.webm$/i.test(obj.video_url) ? 'video/webm' : 'video/mp4';
-              v.innerHTML=`<video controls playsinline><source src="${encodeURI(obj.video_url)}" type="${type}"></video>`;
-              chatEl.appendChild(v);
-            }
-
-            const chunk = pickContent(obj);
-            if(chunk){
-              if(!started){ setStatusChip(targetNode,'thought'); started=true; }
-              acc += chunk;
-              schedule();
-            }
-          }
-          continue;
-        }catch{
-          // text thường: thử bắt JSON _media inline
-          try{
-            const m = line.match(/\{[\s\S]*"_media"[\s\S]*\}/);
-            if(m){
-              const o = JSON.parse(m[0]);
-              if(o && o._media){
-                handleMediaDirective(o._media, targetNode);
-                continue; // không render JSON ra UI
-              }
-            }
-          }catch{}
-        }
+      function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+          alert("Session timed out.");
+          signOut();
+        }, AUTO_LOGOUT_MS);
+      }
+      function initInactivityListeners() {
+        ["click","keydown","mousemove","scroll","touchstart"].forEach(
+          ev => addEventListener(ev, resetInactivityTimer, { passive: true })
+        );
+        resetInactivityTimer();
       }
 
-      if(line.trim()){
-        if(!started){ setStatusChip(targetNode,'thought'); started=true; }
-        acc += line + '\n';
-        schedule();
-      }
-    }
-    buffer = buffer.slice(pos);
-    if(done) break;
-  }
-
-  if(buffer.trim()){
-    let line = buffer.replace(/^\s*data\s*:\s?/, '');
-    try{
-      const obj=JSON.parse(line);
-      if(obj && obj._media && typeof obj._media === 'object'){
-        handleMediaDirective(obj._media, targetNode);
-      }else if(obj.type!=='begin' && obj.type!=='end'){
-        if(obj.pending && obj.op_name && !videoRendered){
-          const typing=document.createElement('div');
-          typing.className='content typing';
-          typing.textContent='Generating video…';
-          targetNode.after(typing);
-          pollVideoUntilReady(obj.op_name, (videoUrl, err)=>{
-            typing.remove();
-            if(err || !videoUrl){
-              const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
-              eDiv.textContent='Video failed. Please try again.';
-              chatEl.appendChild(eDiv);
-              return;
-            }
-            videoRendered=true;
-            lastVideoUrl=videoUrl;
-            const v=document.createElement('div'); v.className='content';
-            const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-            v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
-            chatEl.appendChild(v);
-          });
-        }
-        if(obj.image_url && !imageRendered){
-          imageRendered=true; lastImageUrl=obj.image_url;
-          const w=document.createElement('div'); w.className='content';
-          w.innerHTML=`<a href="${encodeURI(obj.image_url)}" target="_blank" rel="noopener"><img src="${encodeURI(obj.image_url)}" alt="Image from AI"></a>`;
-          chatEl.appendChild(w);
-        }
-        if(obj.video_url && !videoRendered){
-          videoRendered=true; lastVideoUrl=obj.video_url;
-          const v=document.createElement('div'); v.className='content';
-          const type = /\.webm$/i.test(obj.video_url) ? 'video/webm' : 'video/mp4';
-          v.innerHTML=`<video controls playsinline><source src="${encodeURI(obj.video_url)}" type="${type}"></video>`;
-          chatEl.appendChild(v);
-        }
-        const chunk=pickContent(obj);
-        if(chunk){ acc+=chunk; }
-      }
-    }catch{
-      // Có thể là text thường
-      try{
-        const m = line.match(/\{[\s\S]*"_media"[\s\S]*\}/);
-        if(m){
-          const o = JSON.parse(m[0]);
-          if(o && o._media) handleMediaDirective(o._media, targetNode);
-        }else{
-          acc+=line+'\n';
-        }
-      }catch{
-        acc+=line+'\n';
-      }
-    }
-    contentEl.innerHTML = renderMarkdown(acc);
-  }
-
-  setTimeout(()=>setStatusChip(targetNode,''),800);
-  return { content: acc, image_url: lastImageUrl, video_url: lastVideoUrl };
-
-  function pickContent(obj){
-    if(typeof obj.delta === 'string') return obj.delta;
-    if(typeof obj.content === 'string') return obj.content;
-    if(typeof obj.output  === 'string') return obj.output;
-    if(obj.item && typeof obj.item.content === 'string') return obj.item.content;
-    if(obj.data && typeof obj.data.text === 'string') return obj.data.text;
-    if(typeof obj.text === 'string') return obj.text;
-    return '';
-  }
-}
-
-/* Gửi */
-async function onSend(){
-  const text=inputEl.value.trim(); if(!text) return;
-
-  appendBubble(text,'user');
-  messages.push({role:'user',content:text,ts:Date.now()}); saveMessages(messages);
-
-  inputEl.value=''; autosizeTextarea(inputEl);
-  toggleInboxSend();
-
-  const node=appendBubble('','assistant'); // placeholder
-  setStatusChip(node,'thinking');
-
-  try{
-    const result=await streamFromWebhook(sessionId,text,node);
-    const finalText = (typeof result==='string') ? result : (result?.content||'');
-    const img = result && result.image_url ? result.image_url : null;
-    const vid = result && result.video_url ? result.video_url : null;
-
-    if(result && result.pending && result.op_name){
-      const typing=document.createElement('div');
-      typing.className='content typing';
-      typing.textContent='Generating video…';
-      node.after(typing);
-
-      await new Promise((resolve)=>{
-        pollVideoUntilReady(result.op_name, (videoUrl, err)=>{
-          typing.remove();
-          if(!err && videoUrl){
-            const v=document.createElement('div'); v.className='content';
-            const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-            v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
-            chatEl.appendChild(v);
-            messages.push({role:'assistant',content:'',image_url:null,video_url:videoUrl,ts:Date.now()});
-            saveMessages(messages);
-          }
-          resolve();
-        });
-      });
-    }
-
-    messages.push({role:'assistant',content:finalText,image_url:img,video_url:vid,ts:Date.now()});
-    saveMessages(messages);
-  }catch(err){
-    const msg=`Error (stream): ${String(err)}`;
-    node.querySelector('.content').innerHTML=renderMarkdown(msg);
-    messages.push({role:'assistant',content:msg,image_url:null,video_url:null,ts:Date.now()});
-    saveMessages(messages);
-  }finally{
-    setTimeout(()=>setStatusChip(node,''), 800);
-  }
-}
-
-/* NON-STREAM fallback (gom NDJSON/text, bắt pending/op_name) */
-async function sendToWebhook(sessionId,message){
-  const headers={'Content-Type':'application/json','Accept':'application/json, text/plain, application/x-ndjson; charset=utf-8'};
-  const res=await fetch("/api/chat",{method:'POST',headers,body:JSON.stringify({sessionId,chatInput:message})});
-  if(!res.ok){
-    const t=await res.text().catch(()=> '');
-    throw new Error(`${res.status} ${t.slice(0,200)}`);
-  }
-  const ct=(res.headers.get('content-type')||'').toLowerCase();
-
-  if(ct.includes('application/json')){
-    try{
-      const data=await res.json();
-      let content=null,image_url=null,video_url=null,pending=false,op_name=null;
-      if(Array.isArray(data)){
-        const f=data[0]||{};
-        content=f.content||f.output||'';
-        image_url=f.image_url||f.url||null;
-        video_url=f.video_url||null;
-        pending=!!f.pending; op_name=f.op_name||null;
-      }else{
-        content=data.content||data.output||'';
-        image_url=data.image_url||data.url||null;
-        video_url=data.video_url||null;
-        pending=!!data.pending; op_name=data.op_name||null;
-      }
-      return {content,image_url,video_url,pending,op_name};
-    }catch{ /* rơi xuống text */ }
-  }
-
-  const text=await res.text();
-  const parsed = renderStreamLikeText(text, null, false);
-  return parsed;
-}
-
-/* Gom NDJSON/text, bắt image_url/video_url + pending/op_name */
-function renderStreamLikeText(text, targetNode=null, markThought=false){
-  const lines=text.split(/\r?\n/);
-  let acc=''; let img=null; let vid=null; let pending=false; let op_name=null;
-
-  for(const raw of lines){
-    if(!raw) continue;
-    let line = raw.replace(/^\s*data\s*:\s?/, '');
-    if(!line) continue;
-
-    if(line[0]==='{' || line[0]==='['){
-      try{
-        const obj=JSON.parse(line);
-        if(obj.type==='begin' || obj.type==='end') continue;
-
-        if(!img && obj.image_url) img = obj.image_url;
-        if(!vid && obj.video_url) vid = obj.video_url;
-
-        if(obj.pending && obj.op_name && !pending){
-          pending=true; op_name=obj.op_name;
-        }
-
-        const chunk = (typeof obj.delta==='string' && obj.delta)
-                   || (typeof obj.content==='string' && obj.content)
-                   || (typeof obj.output==='string' && obj.output)
-                   || (obj.item && typeof obj.item.content==='string' && obj.item.content)
-                   || (obj.data && typeof obj.data.text==='string' && obj.data.text)
-                   || (typeof obj.text==='string' && obj.text)
-                   || '';
-        if(chunk) acc+=chunk;
-        continue;
-      }catch{}
-    }
-    acc += line + '\n';
-  }
-
-  if(targetNode){
-    if(markThought) setStatusChip(targetNode,'thought');
-    targetNode.querySelector('.content').innerHTML=renderMarkdown(acc||'');
-
-    if(img){
-      const w=document.createElement('div'); w.className='content';
-      w.innerHTML=`<a href="${encodeURI(img)}" target="_blank" rel="noopener"><img src="${encodeURI(img)}" alt="Image from AI"></a>`;
-      chatEl.appendChild(w);
-    }
-    if(vid){
-      const v=document.createElement('div'); v.className='content';
-      const type = /\.webm$/i.test(vid) ? 'video/webm' : 'video/mp4';
-      v.innerHTML=`<video controls playsinline><source src="${encodeURI(vid)}" type="${type}"></video>`;
-      chatEl.appendChild(v);
-    }
-
-    if(pending && op_name){
-      const typing=document.createElement('div');
-      typing.className='content typing';
-      typing.textContent='Generating video…';
-      targetNode.after(typing);
-      pollVideoUntilReady(op_name, (videoUrl, err)=>{
-        typing.remove();
-        if(err || !videoUrl){
-          const eDiv=document.createElement('div'); eDiv.className='content'; eDiv.style.color='#b91c1c';
-          eDiv.textContent='Video failed. Please try again.';
-          chatEl.appendChild(eDiv);
+      async function checkAccess() {
+        const val = accessEl.value.trim();
+        if (!val) {
+          loginMsg.textContent = "Please enter the Access code";
+          loginMsg.style.display = "block";
           return;
         }
-        const v=document.createElement('div'); v.className='content';
-        const type = /\.webm$/i.test(videoUrl) ? 'video/webm' : 'video/mp4';
-        v.innerHTML=`<video controls playsinline><source src="${encodeURI(videoUrl)}" type="${type}"></video>`;
-        chatEl.appendChild(v);
+        loginBtn.disabled = true;
+        const oldLabel = loginBtn.textContent;
+        loginBtn.textContent = "Verifying...";
+        loginMsg.style.display = "none";
+
+        try {
+          const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ code: val }),
+          });
+          if (res.ok) {
+            loginBox.classList.add("hidden");
+            chatBox.classList.remove("hidden");
+            initInactivityListeners();
+            accessEl.value = "";
+            await reloadHistory();
+          } else {
+            let reason = "Invalid Access Code";
+            try { const j = await res.json(); if (j?.error) reason = j.error; } catch {}
+            loginMsg.textContent = reason;
+            loginMsg.style.display = "block";
+          }
+        } catch {
+          loginMsg.textContent = "Unable to connect. Please try again later.";
+          loginMsg.style.display = "block";
+        } finally {
+          loginBtn.disabled = false;
+          loginBtn.textContent = oldLabel;
+        }
+      }
+      loginBtn.addEventListener("click", checkAccess);
+      accessEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); checkAccess(); } });
+
+      async function signOut() {
+  	try { await fetch("/api/logout", { method: "POST" }); } catch {}
+
+  	clearTimeout(inactivityTimer);
+  	localStorage.removeItem("ppsai_session_id");
+
+  	// (tuỳ chọn) Xoá state trong RAM + (tuỳ chọn) ghi rỗng lịch sử vào IDB/LocalStorage (bỏ // để chạy hàm)
+  	//try {
+    	// messages = [];   // (bỏ // để chạy hàm)
+    	// await saveMessagesIDB(messages); // ghi lịch sử rỗng (bỏ // để chạy hàm)
+  	//} catch {}
+
+  	// (tuỳ chọn) nếu muốn sạch media cache khi sign out:
+  	// try { await idbClear("media"); } catch {}     // (bỏ // để chạy hàm)
+
+  	// Dọn UI
+  	const chatEl = document.getElementById("chat");
+  	if (chatEl) chatEl.innerHTML = "";
+
+  	chatBox.classList.add("hidden");
+  	loginBox.classList.remove("hidden");
+	}
+      signoutBtn.addEventListener("click", signOut);
+
+      (async () => {
+        const r = await fetch("/api/session").catch(() => null);
+        if (r && r.ok) {
+          loginBox.classList.add("hidden");
+          chatBox.classList.remove("hidden");
+          initInactivityListeners();
+        }
+      })();
+
+      kebabBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        kebabMenu.classList.toggle("show");
       });
-    }
+      addEventListener("click", (e) => {
+        if (!kebabBtn.contains(e.target)) kebabMenu.classList.remove("show");
+      });
+      kebabSignOut?.addEventListener("click", () => {
+        kebabMenu.classList.remove("show");
+        signOut();
+      });
+
+      const kebabClearHistory = document.getElementById("kebabClearHistory");
+      async function idbClear(store) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const tx = db.transaction(store, "readwrite");
+          tx.oncomplete = () => res();
+          tx.onerror = () => rej(tx.error);
+          tx.objectStore(store).clear();
+        });
+      }
+      async function clearHistory() {
+        if (!confirm("Clear all history and media stored on this device?")) return;
+        try { await idbClear("messages"); await idbClear("media"); messages = []; await saveMessagesIDB([]); } catch(e){ console.warn("IDB clear failed:", e); }
+        try { localStorage.removeItem("ppsai_messages"); } catch{}
+        if (typeof messages !== "undefined") messages = [];
+        const chatElDom = document.getElementById("chat");
+        if (chatElDom) chatElDom.innerHTML = "";
+        alert("Done! History on this device has been cleared.");
+      }
+      kebabClearHistory?.addEventListener("click", () => {
+        kebabMenu.classList.remove("show");
+        clearHistory();
+      });
+    </script>
+
+    <!-- CHAT CORE -->
+    <script>
+      const chatEl = document.getElementById("chat");
+      const inputEl = document.getElementById("prompt");
+
+      const promptWrap = document.getElementById("promptWrap");
+      const fileInput = document.getElementById("fileInput");
+      const attachBtn = document.getElementById("attachBtn");
+      const thumbBox = document.getElementById("thumbBox");
+
+      let pendingImages = [];  // mảng base64
+
+function renderThumbs() {
+  // hiển thị/ẩn vùng thumb
+  if (pendingImages.length === 0) {
+    thumbBox.classList.add("hidden");
+    promptWrap.classList.remove("has-thumb");
+    shrinkPromptToMinHeight();
+    thumbBox.innerHTML = `
+      <div class="thumb-actions">
+        <button id="thumbRemoveAll" class="thumb-remove" title="Remove">&times;</button>
+        <button id="thumbReplace" class="thumb-action-btn" title="Add more" aria-label="Add more">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.5"/>
+          </svg>
+        </button>
+      </div>`;
+    // gắn lại events cho action bar rỗng
+    document.getElementById("thumbReplace")?.addEventListener("click", (e)=>{e.preventDefault(); fileInput?.click();});
+    document.getElementById("thumbRemoveAll")?.addEventListener("click", (e)=>{e.preventDefault(); pendingImages=[]; renderThumbs(); toggleInboxSend();});
+    return;
   }
 
-  return {content:acc, image_url:img, video_url:vid, pending, op_name};
+  // có ảnh
+  promptWrap.classList.add("has-thumb");
+  thumbBox.classList.remove("hidden");
+
+  // khối actions + list thumb
+  thumbBox.innerHTML = `
+    <div class="thumb-actions">
+      <button id="thumbRemoveAll" class="thumb-remove" title="Remove all">&times;</button>
+      <button id="thumbReplace" class="thumb-action-btn" title="Add more" aria-label="Add more">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.5"/>
+        </svg>
+      </button>
+    </div>
+    <div class="thumb-list" style="display:flex; gap:8px; flex-wrap:wrap; padding-right:68px;">
+    </div>
+  `;
+  const list = thumbBox.querySelector(".thumb-list");
+
+  pendingImages.forEach((src, idx) => {
+    const item = document.createElement("div");
+    item.style.position = "relative";
+    item.innerHTML = `
+      <img src="${src}" alt="preview ${idx+1}" draggable="false" style="width:var(--thumb-size);height:var(--thumb-size);border-radius:12px;object-fit:cover;border:1px solid var(--bubble-border);box-shadow:0 2px 6px rgba(0,0,0,.08);" />
+      <button class="thumb-remove" data-idx="${idx}" title="Remove"
+        style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:999px;border:1px solid rgba(0,0,0,.15);background:rgba(17,24,39,.95);color:#fff;cursor:pointer;">&times;</button>
+    `;
+    list.appendChild(item);
+  });
+
+  // events cho remove từng ảnh + add more
+  list.querySelectorAll(".thumb-remove").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      e.preventDefault();
+      const i = Number(btn.getAttribute("data-idx"));
+      pendingImages.splice(i,1);
+      renderThumbs();
+      toggleInboxSend();
+    });
+  });
+  document.getElementById("thumbReplace")?.addEventListener("click", (e)=>{e.preventDefault(); fileInput?.click();});
+  document.getElementById("thumbRemoveAll")?.addEventListener("click", (e)=>{e.preventDefault(); pendingImages=[]; renderThumbs(); toggleInboxSend();});
 }
 
-/* Scroll-to-bottom button */
-(function(){
-  const chatBox=document.getElementById('chat');
-  const scrollBtn=document.getElementById('scrollBtn');
-  function toggleBtn(){
-    const threshold=200;
-    if (chatBox.scrollHeight - chatBox.scrollTop > chatBox.clientHeight + threshold) {
-      scrollBtn.classList.add('show');
-    } else {
-      scrollBtn.classList.remove('show');
+function clearPendingImages() {
+  pendingImages = [];
+  renderThumbs();
+}
+
+function resetComposer() {
+  // Clear toàn bộ ảnh (mảng pendingImages) + trạng thái has-thumb
+  clearPendingImages();
+  fileInput.value = "";
+
+  // Clear nội dung text + reset chiều cao về min-height
+  inputEl.value = "";
+  inputEl.style.height = "";
+  inputEl.style.overflowY = "hidden";
+
+  toggleInboxSend();
+}
+
+      function readFileAsDataURL(file) {
+        return new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result);
+          fr.onerror = () => rej(fr.error || new Error("read_error"));
+          fr.readAsDataURL(file);
+        });
+      }
+function getAttachments() {
+  if (pendingImages.length) {
+    return pendingImages.map(b64 => ({ type: "image", base64: b64 }));
+  }
+  return [];
+}
+
+      attachBtn?.addEventListener("click", () => fileInput?.click());
+fileInput?.addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  const MAX = 8 * 1024 * 1024;
+  const added = [];
+
+  for (const f of files) {
+    if (!/^image\//i.test(f.type)) { alert("Only image files are allowed."); continue; }
+    if (f.size > MAX) { alert(`Image too large (max 8MB): ${f.name}`); continue; }
+    try {
+      const dataUrl = await readFileAsDataURL(f);
+      added.push(dataUrl);
+    } catch {
+      alert(`Failed to read: ${f.name}`);
     }
   }
-  chatBox.addEventListener('scroll',toggleBtn);
-  scrollBtn.addEventListener('click',()=>{chatBox.scrollTop=chatBox.scrollHeight;});
-  toggleBtn();
-})();
-</script>
-</body>
+
+  if (added.length) {
+    pendingImages.push(...added);
+    renderThumbs();
+    autosizeTextarea(inputEl);
+    toggleInboxSend();
+  }
+  fileInput.value = "";
+});
+
+inputEl.addEventListener("paste", async (e) => {
+  const items = Array.from(e.clipboardData?.items || []).filter(i => i.type?.startsWith("image/"));
+  if (!items.length) return;
+
+  for (const it of items) {
+    const file = it.getAsFile();
+    if (!file) continue;
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      pendingImages.push(dataUrl);
+    } catch {}
+  }
+
+  renderThumbs();
+  autosizeTextarea(inputEl);
+  toggleInboxSend();
+});
+
+      const SESSION_KEY = "ppsai_session_id";
+      let sessionId = localStorage.getItem(SESSION_KEY);
+      if (!sessionId) {
+        sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString();
+        localStorage.setItem(SESSION_KEY, sessionId);
+      }
+
+      const IDB_NAME = "ppsai_store_v2";
+      const ST_MEDIA = "media";
+      const ST_MSGS = "messages";
+
+      function idbOpen() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(IDB_NAME, 2);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(ST_MEDIA)) db.createObjectStore(ST_MEDIA, { keyPath: "id" });
+            if (!db.objectStoreNames.contains(ST_MSGS)) db.createObjectStore(ST_MSGS, { keyPath: "key" });
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      async function idbPut(store, record) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const tx = db.transaction(store, "readwrite");
+          tx.oncomplete = () => res();
+          tx.onerror = () => rej(tx.error);
+          tx.objectStore(store).put(record);
+        });
+      }
+      async function idbGet(store, key) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const tx = db.transaction(store, "readonly");
+          const req = tx.objectStore(store).get(key);
+          req.onsuccess = () => res(req.result || null);
+          req.onerror = () => rej(req.error);
+        });
+      }
+      async function idbDel(store, key) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const tx = db.transaction(store, "readwrite");
+          tx.oncomplete = () => res();
+          tx.onerror = () => rej(tx.error);
+          tx.objectStore(store).delete(key);
+        });
+      }
+      function isIdbRef(ref) { return typeof ref === "string" && ref.startsWith("idb://"); }
+      function idFromRef(ref) { return ref.replace(/^idb:\/\//, ""); }
+
+      const MSGS_KEY = "ppsai_messages";
+      const HISTORY_TTL_DAYS = 90, HISTORY_MAX_ITEMS = 1000, HISTORY_MAX_BYTES = 50_000_000;
+
+      function pruneMessages(arr) {
+        const now = Date.now(), ttlMs = HISTORY_TTL_DAYS * 24 * 60 * 60 * 1000;
+        let pruned = arr.filter((m) => !m.ts || now - m.ts <= ttlMs);
+        if (pruned.length > HISTORY_MAX_ITEMS) pruned = pruned.slice(pruned.length - HISTORY_MAX_ITEMS);
+        let json = JSON.stringify(pruned);
+        while (json.length > HISTORY_MAX_BYTES && pruned.length > 1) { pruned.shift(); json = JSON.stringify(pruned); }
+        if (json.length > HISTORY_MAX_BYTES && pruned.length === 1) {
+          const MAX_MSG_CHARS = 20_000;
+          if (typeof pruned[0].content === "string" && pruned[0].content.length > MAX_MSG_CHARS) {
+            pruned[0].content = pruned[0].content.slice(0, MAX_MSG_CHARS) + "… (truncated)";
+          }
+        }
+        return pruned;
+      }
+      async function loadMessagesIDB() {
+        const rec = await idbGet(ST_MSGS, "history");
+        if (rec && Array.isArray(rec.value)) return rec.value;
+        try { return JSON.parse(localStorage.getItem(MSGS_KEY) || "[]"); } catch { return []; }
+      }
+      async function saveMessagesIDB(arr) {
+        const pruned = pruneMessages(arr);
+        await idbPut(ST_MSGS, { key: "history", value: pruned });
+        try { localStorage.setItem(MSGS_KEY, JSON.stringify(pruned)); } catch {}
+        return pruned;
+      }
+      async function reloadHistory() {
+        try { messages = await loadMessagesIDB(); if (!Array.isArray(messages)) messages = []; }
+        catch { messages = []; }
+        renderHistorySync(messages);
+      }
+
+      async function cacheMediaFromUrl(url) {
+        try {
+          const res = await fetch(url, { mode: "cors", credentials: "omit" });
+          if (!res.ok) throw new Error("fetch_failed");
+          const blob = await res.blob();
+          const id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+          await idbPut(ST_MEDIA, { id, mime: blob.type || "", blob });
+          return { ref: `idb://${id}`, volatile: false };
+        } catch (e) {
+          return { ref: url, volatile: true };
+        }
+      }
+
+      async function setPosterFromFirstFrame(videoEl) {
+        const src = videoEl.currentSrc || "";
+        const isBlobOrData = /^blob:|^data:/i.test(src);
+        let isSameOrigin = false;
+        try { const u = new URL(src, location.href); isSameOrigin = (u.origin === location.origin); } catch {}
+        if (!isBlobOrData && !isSameOrigin) return;
+        await new Promise(res => { if (videoEl.readyState >= 1) res(); else videoEl.addEventListener("loadedmetadata", res, { once:true }); });
+        const t = Math.min(0.1, (videoEl.duration || 1) / 20);
+        await new Promise(res => {
+          const go = () => { videoEl.currentTime = t; };
+          if (videoEl.readyState >= 2) go(); else videoEl.addEventListener("loadeddata", go, { once:true });
+          videoEl.addEventListener("seeked", res, { once:true });
+        });
+        try {
+          const c = document.createElement("canvas");
+          c.width = videoEl.videoWidth; c.height = videoEl.videoHeight;
+          c.getContext("2d").drawImage(videoEl, 0, 0, c.width, c.height);
+          videoEl.setAttribute("poster", c.toDataURL("image/jpeg", 0.8));
+        } catch {}
+      }
+
+      async function toObjectURL(ref) {
+        if (isIdbRef(ref)) {
+          const rec = await idbGet(ST_MEDIA, idFromRef(ref));
+          if (!rec) throw new Error("idb_miss");
+          return URL.createObjectURL(rec.blob);
+        }
+        return ref;
+      }
+
+      function renderMarkdownSetup() {
+        marked.setOptions({ gfm:true, breaks:true, headerIds:false, mangle:false });
+      }
+      function renderMarkdown(md) {
+        let html = marked.parse(md || "");
+        html = html.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+        return DOMPurify.sanitize(html);
+      }
+      function setStatusChip(targetNode, typeOrText) {
+        if (!targetNode) return;
+        let chip = targetNode.querySelector(".status-chip");
+        if (!chip) { chip = document.createElement("div"); chip.className = "status-chip"; targetNode.appendChild(chip); }
+        if (typeOrText === "thinking") chip.innerHTML = `<span class="pulse">Thinking…</span>`;
+        else if (typeOrText === "thought") chip.innerHTML = `<span class="pulse">Thought</span>`;
+        else chip.textContent = "";
+      }
+
+      async function saveBlobAsRef(ref, suggestedName) {
+        try {
+          let blob;
+          if (ref.startsWith("idb://")) {
+            const rec = await idbGet(ST_MEDIA, ref.replace(/^idb:\/\//,""));
+            if (!rec) throw new Error("idb_miss");
+            blob = rec.blob;
+          } else {
+            const r = await fetch(ref, { mode: "cors" });
+            if (!r.ok) throw new Error("fetch_failed");
+            blob = await r.blob();
+          }
+          if (window.showSaveFilePicker) {
+            const accept = blob.type.startsWith("video/")
+              ? (blob.type === "video/webm" ? { "video/webm": [".webm"] } : { "video/mp4": [".mp4"] })
+              : { "image/*": [".png", ".jpg", ".jpeg", ".webp", ".gif"] };
+            const handle = await window.showSaveFilePicker({
+              suggestedName,
+              types: [{ description: "Media", accept }],
+            });
+            const w = await handle.createWritable();
+            await w.write(blob); await w.close(); return;
+          }
+          const a = document.createElement("a");
+          const u = URL.createObjectURL(blob);
+          a.href = u; a.download = suggestedName;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(u), 1500);
+        } catch { alert("Save failed. Please try again."); }
+      }
+      function guessFilename(ref, kind) {
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        if (typeof ref === "string" && !ref.startsWith("idb://")) {
+          const base = (ref.split("?")[0].split("/").pop() || "").trim();
+          if (/\.[a-z0-9]{2,5}$/i.test(base)) return base;
+        }
+        return kind === "video" ? `ppsai-video-${ts}.mp4` : `ppsai-image-${ts}.png`;
+      }
+
+      function createMediaBlock(ref, kind) {
+        const wrap = document.createElement("div");
+        wrap.className = "content";
+        const holder = document.createElement("div");
+        holder.className = "media-wrap";
+        const overlayBtn = document.createElement("button");
+        overlayBtn.className = "media-save";
+        overlayBtn.textContent = "Save";
+        overlayBtn.disabled = true;
+        overlayBtn.addEventListener("click", () => {
+          overlayBtn.disabled = true;
+          saveBlobAsRef(ref, guessFilename(ref, kind)).finally(() => (overlayBtn.disabled = false));
+        });
+
+        if (kind === "image") {
+          const a = document.createElement("a");
+          a.target = "_blank"; a.rel = "noopener";
+          const img = document.createElement("img");
+          img.loading = "lazy"; img.alt = "Image from AI";
+          a.appendChild(img);
+          holder.appendChild(a);
+          holder.appendChild(overlayBtn);
+          wrap.appendChild(holder);
+          (async () => {
+            const url = await toObjectURL(ref);
+            a.href = url; img.src = url; overlayBtn.disabled = false;
+          })().catch(() => { holder.textContent = "(failed to load image)"; });
+        } else {
+          const v = document.createElement("video");
+          v.controls = true; v.playsInline = true; v.setAttribute("webkit-playsinline",""); v.preload = "metadata"; v.muted = true;
+          holder.appendChild(v); holder.appendChild(overlayBtn); wrap.appendChild(holder);
+          (async () => {
+            const url = await toObjectURL(ref);
+            const type = /\.webm(\?|$)/i.test(url) ? "video/webm" : "video/mp4";
+            v.innerHTML = `<source src="${url}" type="${type}">`;
+            overlayBtn.disabled = false;
+            v.setAttribute('poster', 'logo.png');
+            setPosterFromFirstFrame(v).catch(() => {});
+            v.load();
+          })().catch(() => { holder.textContent = "(failed to load video)"; });
+        }
+        return wrap;
+      }
+
+      function appendBubble(text, role = "assistant", imageRef = null, videoRef = null) {
+        const d = document.createElement("div");
+        d.className = "msg " + (role === "user" ? "user" : "assistant");
+        if (role === "assistant") {
+          const av = document.createElement("img");
+          av.src = "assistant_icon_256.png"; av.alt = "Assistant"; av.className = "avatar";
+          av.onerror = () => { av.replaceWith(document.createTextNode("🤖")); };
+          d.appendChild(av);
+          const chip = document.createElement("div"); chip.className = "status-chip"; chip.textContent = ""; d.appendChild(chip);
+        }
+        const content = document.createElement("div"); content.className = "content";
+        const md = document.createElement("div"); md.className = "md"; md.innerHTML = renderMarkdown(text || "");
+        content.appendChild(md); d.appendChild(content); chatEl.appendChild(d);
+        if (imageRef) content.appendChild(createMediaBlock(imageRef, "image"));
+        if (videoRef) content.appendChild(createMediaBlock(videoRef, "video"));
+        chatEl.scrollTop = chatEl.scrollHeight;
+        return d;
+      }
+
+      function renderHistorySync(arr) {
+        chatEl.innerHTML = "";
+        const sorted = [...arr].sort((a,b) => (a.ts || 0) - (b.ts || 0));
+        sorted.forEach((m) => {
+          const imgRef = m.image_id || m.image_url || null;
+          const vidRef = m.video_id || m.video_url || null;
+          appendBubble(m.content, m.role, imgRef, vidRef);
+        });
+      }
+
+      function stripCodeFence(s){ return typeof s === "string" ? s.replace(/```(?:json)?\s*([\s\S]*?)```/gi, "$1") : s; }
+      function tryParseJSON(text){ try { return JSON.parse(text); } catch { return null; } }
+      function getPrimaryText(obj){
+        if (!obj) return "";
+        if (typeof obj === "string") return obj;
+        if (Array.isArray(obj)) { for (const it of obj){ const t = getPrimaryText(it); if (t) return t; } return ""; }
+        return (
+          (typeof obj.delta === "string" && obj.delta) ||
+          (typeof obj.content === "string" && obj.content) ||
+          (typeof obj.output === "string" && obj.output) ||
+          (obj.item && typeof obj.item.content === "string" && obj.item.content) ||
+          (obj.data && typeof obj.data.text === "string" && obj.data.text) ||
+          (typeof obj.text === "string" && obj.text) || ""
+        );
+      }
+
+      function extractMediaLoose(s){
+        if (!s || typeof s !== "string") return null;
+        const str = stripCodeFence(s);
+        const m = /"_media"\s*:\s*\{([\s\S]*?)\}/i.exec(str) || /"__media__"\s*:\s*\{([\s\S]*?)\}/i.exec(str);
+        if (!m) return null;
+        const inner = m[1];
+        const type = /"type"\s*:\s*"(image|video)"/i.exec(inner)?.[1];
+        const prompt = /"prompt"\s*:\s*"([\s\S]*?)"/i.exec(inner)?.[1];
+        if (!type || !prompt) return null;
+        return { type: type.toLowerCase(), prompt: prompt.replace(/\\"/g,'"').replace(/\\n/g,"\n").replace(/\\t/g,"\t") };
+      }
+      function stripMediaFromTextLoose(s){
+        if (typeof s !== "string") return s;
+        let out = stripCodeFence(s);
+        out = out.replace(/\s*,?\s*\{[\s\S]*?"_media"[\s\S]*?\}\s*,?\s*/gi, "\n");
+        out = out.replace(/\s*,?\s*\{[\s\S]*?"__media__"[\s\S]*?\}\s*,?\s*/gi, "\n");
+        out = out.replace(/\s*,?\s*\{[\s\S]*?"_media_edit"[\s\S]*?\}\s*,?\s*/gi, "\n");
+        out = out.replace(/\s*,?\s*\{[\s\S]*?"media_edit"[\s\S]*?\}\s*,?\s*/gi, "\n");
+        out = out.replace(/^[\s,]+$/g, "");
+        out = out.replace(/^\s*\}+\s*$/gm, ""); /* drop dangling braces-only lines */
+        return out;
+      }
+      function findMediaInstruction(objOrText){
+        if (!objOrText) return null;
+        if (typeof objOrText === "string") {
+          const loose = extractMediaLoose(objOrText); if (loose) return loose;
+          const j = tryParseJSON(stripCodeFence(objOrText).trim()); if (j){ const got = findMediaInstruction(j); if (got) return got; }
+          return null;
+        }
+        const o = objOrText;
+        if (o._media && o._media.prompt && (o._media.type === "image" || o._media.type === "video")) {
+          return { type: o._media.type, prompt: o._media.prompt };
+        }
+        if (typeof o.output === "string") { const got = findMediaInstruction(o.output); if (got) return got; }
+        if (typeof o.content === "string") { const got = findMediaInstruction(o.content); if (got) return got; }
+        if (Array.isArray(o)) { for (const it of o){ const got = findMediaInstruction(it); if (got) return got; } }
+        if (o.data && typeof o.data.text === "string") { const got = findMediaInstruction(o.data.text); if (got) return got; }
+        return null;
+      }
+
+      function extractMediaEditLoose(s){
+        if (!s || typeof s !== "string") return null;
+        const str = stripCodeFence(s);
+        const m = /"_media_edit"\s*:\s*\{([\s\S]*?)\}/i.exec(str) || /"media_edit"\s*:\s*\{([\s\S]*?)\}/i.exec(str);
+        if (!m) return null;
+        const inner = m[1];
+        const prompt = /"prompt"\s*:\s*"([\s\S]*?)"/i.exec(inner)?.[1] || /"instructions"\s*:\s*"([\s\S]*?)"/i.exec(inner)?.[1];
+        if (!prompt) return null;
+        return { kind:"edit", prompt: prompt.replace(/\\"/g,'"').replace(/\\n/g,"\n").replace(/\\t/g,"\t") };
+      }
+      function stripMediaEditFromTextLoose(s){
+        if (typeof s !== "string") return s;
+        let out = stripCodeFence(s);
+        out = out.replace(/\s*,?\s*\{[\s\S]*?"_media_edit"[\s\S]*?\}\s*,?\s*/gi, "\n");
+        out = out.replace(/\s*,?\s*\{[\s\S]*?"media_edit"[\s\S]*?\}\s*,?\s*/gi, "\n");
+        out = out.replace(/^[\s,]+$/g, "");
+        return out;
+      }
+      function findMediaEditInstruction(objOrText){
+        if (!objOrText) return null;
+        if (typeof objOrText === "string") {
+          const loose = extractMediaEditLoose(objOrText); if (loose) return loose;
+          const j = tryParseJSON(stripCodeFence(objOrText).trim()); if (j){ const got = findMediaEditInstruction(j); if (got) return got; }
+          return null;
+        }
+        const o = objOrText;
+        const cand = o._media_edit || o.media_edit;
+        if (cand && (typeof cand.prompt === "string" || typeof cand.instructions === "string")) {
+          return { kind:"edit", prompt:String(cand.prompt || cand.instructions) };
+        }
+        if (typeof o.output === "string") { const got = findMediaEditInstruction(o.output); if (got) return got; }
+        if (typeof o.content === "string") { const got = findMediaEditInstruction(o.content); if (got) return got; }
+        if (Array.isArray(o)) { for (const it of o){ const got = findMediaEditInstruction(it); if (got) return got; } }
+        if (o.data && typeof o.data.text === "string") { const got = findMediaEditInstruction(o.data.text); if (got) return got; }
+        return null;
+      }
+
+      async function callMediaAndRender(instr, anchorNode) {
+        if (!instr) return;
+        const resp = await fetch("/api/media", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({ type: instr.type, prompt: instr.prompt }),
+        });
+        const j = await resp.json().catch(() => null);
+        if (!resp.ok || !j?.ok) {
+          const eDiv = document.createElement("div");
+          eDiv.className = "content"; eDiv.style.color = "#b91c1c";
+          eDiv.textContent = "Media generation failed.";
+          (anchorNode || chatEl).appendChild(eDiv);
+          return;
+        }
+        if (j.image_url) {
+          const { ref, volatile } = await cacheMediaFromUrl(j.image_url);
+          const target = anchorNode?.querySelector(".content") || chatEl;
+          target.appendChild(createMediaBlock(ref, "image"));
+          messages.push({ role:"assistant", content:"", image_url:j.image_url, image_id: ref.startsWith("idb://")?ref:null, video_url:null, video_id:null, volatile:!!volatile, ts:Date.now() });
+          messages = await saveMessagesIDB(messages);
+        } else if (j.pending && j.op_name) {
+          const typing = document.createElement("div");
+          typing.className = "content typing"; typing.textContent = "🎬 Preparing your video…";
+          const target = anchorNode?.querySelector(".content") || chatEl; target.appendChild(typing);
+          (function poll(op){
+            const step = async () => {
+              try {
+                const r = await fetch(`/api/media?op=${encodeURIComponent(op)}`);
+                const k = await r.json();
+                if (!r.ok || !k.ok) throw new Error();
+                if (k.pending) setTimeout(step, k.poll_after_ms || 3000);
+                else {
+                  typing.remove();
+                  const { ref, volatile } = await cacheMediaFromUrl(k.video_url);
+                  target.appendChild(createMediaBlock(ref, "video"));
+                  messages.push({ role:"assistant", content:"", image_url:null, image_id:null, video_url:k.video_url, video_id: ref.startsWith("idb://")?ref:null, volatile:!!volatile, ts:Date.now() });
+                  messages = await saveMessagesIDB(messages);
+                }
+              } catch { typing.textContent = "Video failed. Please try again."; }
+            };
+            step();
+          })(j.op_name);
+        } else if (j.video_url) {
+          const { ref, volatile } = await cacheMediaFromUrl(j.video_url);
+          const target = anchorNode?.querySelector(".content") || chatEl;
+          target.appendChild(createMediaBlock(ref, "video"));
+          messages.push({ role:"assistant", content:"", image_url:null, image_id:null, video_url:j.video_url, video_id: ref.startsWith("idb://")?ref:null, volatile:!!volatile, ts:Date.now() });
+          messages = await saveMessagesIDB(messages);
+        }
+      }
+
+      async function callMediaEditAndRender(instr, anchorNode, attachmentsAtSend) {
+        if (!instr || !instr.prompt) return;
+        const payload = {
+          instructions: instr.prompt,
+          attachments: attachmentsAtSend && attachmentsAtSend.length ? attachmentsAtSend : getAttachments() || [],
+        };
+        if (!payload.attachments.length) {
+          const eDiv = document.createElement("div");
+          eDiv.className = "content"; eDiv.style.color = "#b91c1c";
+          eDiv.textContent = "No image attached for editing.";
+          (anchorNode || chatEl).appendChild(eDiv);
+          return;
+        }
+        const resp = await fetch("/api/media-edit", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const j = await resp.json().catch(() => null);
+        if (!resp.ok || !j?.ok) {
+          const eDiv = document.createElement("div");
+          eDiv.className = "content"; eDiv.style.color = "#b91c1c";
+          eDiv.textContent = "Image edit failed.";
+          (anchorNode || chatEl).appendChild(eDiv);
+          return;
+        }
+        const first = (j.results || []).find((r) => r.ok && r.image_url);
+        if (first?.image_url) {
+          const { ref, volatile } = await cacheMediaFromUrl(first.image_url);
+          const target = anchorNode?.querySelector(".content") || chatEl;
+          target.appendChild(createMediaBlock(ref, "image"));
+          messages.push({ role:"assistant", content:"", image_url:first.image_url, image_id: ref.startsWith("idb://")?ref:null, video_url:null, video_id:null, volatile:!!volatile, ts:Date.now() });
+          messages = await saveMessagesIDB(messages);
+        }
+      }
+
+      function isOnlyBraces(s){ return typeof s === "string" && /^\s*\}+\s*$/.test(s); }
+      function stripDanglingBraces(text){ if (typeof text !== "string") return text; return text.replace(/^\s*\}+\s*$/gm, ""); }
+
+      async function streamFromWebhook(sessionId, message, targetNode, attachmentsOverride) {
+        const headers = {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream, application/x-ndjson, application/json, text/plain; charset=utf-8",
+        };
+        const body = JSON.stringify({ sessionId, chatInput: message, attachments: attachmentsOverride || getAttachments() });
+
+        const tries = [{ url: "/api/chat?stream=1", method: "POST" }, { url: "/api/chat/stream", method: "POST" }];
+        let res = null;
+        for (const t of tries) {
+          try { const r = await fetch(t.url, { method: t.method, headers, body }); if (r.ok) { res = r; break; } } catch {}
+        }
+        if (!res) return await sendToWebhook(sessionId, message, targetNode, attachmentsOverride);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        const contentEl = targetNode.querySelector(".content .md") || targetNode.querySelector(".content");
+        setStatusChip(targetNode, "thinking");
+
+        let buffer = "", textAcc = "", capturingJson = false, jsonFrag = "", needs = false;
+
+        const schedule = () => {
+          if (needs) return; needs = true;
+          setTimeout(() => {
+            contentEl.innerHTML = renderMarkdown(stripDanglingBraces(stripMediaFromTextLoose(textAcc)));
+            chatEl.scrollTop = chatEl.scrollHeight;
+            needs = false;
+          }, 33);
+        };
+
+        async function tryFlushMediaFromJsonFrag(force = false) {
+          if (!jsonFrag) return false;
+          if (
+            !force &&
+            !/\\"\s*\}\s*\}\s*$/.test(jsonFrag) &&
+            !/\\"}}\s*$/.test(jsonFrag) &&
+            !/\}\s*\}\s*$/.test(jsonFrag)
+          ) {
+            if (!jsonFrag.includes("_media") && !jsonFrag.includes("__media__") && !jsonFrag.includes("_media_edit") && !jsonFrag.includes("media_edit")) return false;
+          }
+          let unescaped = jsonFrag.replace(/\\"/g,'"').replace(/\\\\/g,"\\").replace(/\\n/g,"\n").replace(/\\t/g,"\t");
+          const editInstr = extractMediaEditLoose(unescaped) || findMediaEditInstruction(unescaped);
+          if (editInstr) {
+            contentEl.innerHTML = renderMarkdown("🖼️ Editing image…");
+            textAcc = stripMediaFromTextLoose(textAcc);
+            await callMediaEditAndRender(editInstr, targetNode, attachmentsOverride);
+            jsonFrag = ""; capturingJson = false; return true;
+          }
+          const instr = extractMediaLoose(unescaped) || findMediaInstruction(unescaped);
+          if (instr) {
+            contentEl.innerHTML = renderMarkdown(instr.type === "image" ? "🖼️ Generating image…" : "🎬 Generating video…");
+            textAcc = stripMediaFromTextLoose(textAcc);
+            await callMediaAndRender(instr, targetNode);
+            jsonFrag = ""; capturingJson = false; return true;
+          }
+          return false;
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (value) buffer += decoder.decode(value, { stream: !done });
+
+          let pos = 0, nl;
+          while ((nl = buffer.indexOf("\n", pos)) !== -1) {
+            let line = buffer.slice(pos, nl);
+            pos = nl + 1;
+            if (!line.trim()) continue;
+            if (/^\s*data\s*:/.test(line)) line = line.replace(/^\s*data\s*:\s?/, "");
+            if (isOnlyBraces(line)) continue;
+
+            if (line[0] === "{" || line[0] === "[") {
+              const obj = tryParseJSON(line);
+              if (!obj) continue;
+              const piece = (typeof obj.content === "string" ? obj.content : getPrimaryText(obj));
+              const isJsonStart = typeof piece === "string" && /{\s*\\?\"/.test(piece);
+              if (isOnlyBraces(piece)) continue;
+
+              if (capturingJson || isJsonStart) {
+                capturingJson = true;
+                if (typeof piece === "string") jsonFrag += piece;
+
+                if (jsonFrag.includes("_media") || jsonFrag.includes("__media__") || jsonFrag.includes("_media_edit") || jsonFrag.includes("media_edit")) {
+                  const called = await tryFlushMediaFromJsonFrag(false);
+                  if (called) continue;
+                }
+                if (typeof piece === "string" && (/\\"}\s*}\s*$/.test(piece) || /\\"}}\s*$/.test(piece) || /\}\s*\}\s*$/.test(piece))) {
+                  await tryFlushMediaFromJsonFrag(true);
+                }
+                continue;
+              }
+
+              const editM = findMediaEditInstruction(obj);
+              if (editM) { contentEl.innerHTML = renderMarkdown("🖼️ Editing image…"); await callMediaEditAndRender(editM, targetNode, attachmentsOverride); continue; }
+              const m = findMediaInstruction(obj);
+              if (m) { contentEl.innerHTML = renderMarkdown(m.type === "image" ? "🖼️ Generating image…" : "🎬 Generating video…"); await callMediaAndRender(m, targetNode); continue; }
+
+              const chunk = piece || getPrimaryText(obj) || "";
+              if (chunk) { textAcc += chunk; schedule(); }
+              continue;
+            }
+            textAcc += line + "\n";
+            schedule();
+          }
+
+          buffer = buffer.slice(pos);
+          if (done) break;
+        }
+
+        if (jsonFrag) { await tryFlushMediaFromJsonFrag(true); }
+
+        if (buffer.trim()) {
+          const maybeEdit = findMediaEditInstruction(buffer) || extractMediaEditLoose(buffer);
+          if (maybeEdit) {
+            contentEl.innerHTML = renderMarkdown("🖼️ Editing image…");
+            await callMediaEditAndRender(maybeEdit, targetNode, attachmentsOverride);
+          } else {
+            const maybe = findMediaInstruction(buffer) || extractMediaLoose(buffer);
+            if (maybe) {
+              contentEl.innerHTML = renderMarkdown(maybe.type === "image" ? "🖼️ Generating image…" : "🎬 Generating video…");
+              await callMediaAndRender(maybe, targetNode);
+            } else {
+              const obj = tryParseJSON(buffer.trim());
+              textAcc += obj ? getPrimaryText(obj) || "" : buffer;
+            }
+          }
+        }
+
+        contentEl.innerHTML = renderMarkdown(stripDanglingBraces(stripMediaFromTextLoose(textAcc)));
+        setTimeout(() => setStatusChip(targetNode, ""), 800);
+        return { content: stripDanglingBraces(stripMediaFromTextLoose(textAcc)), image_url: null, video_url: null };
+      }
+
+      let messages = [];
+
+async function onSend() {
+  const text = inputEl.value.trim();
+  const hadImages = pendingImages.length > 0;
+  if (!text && !hadImages) return;
+
+  // copy mảng ảnh tại thời điểm bấm gửi (tránh bị thay đổi sau đó)
+  const imagesCopy = hadImages ? pendingImages.map(b64 => ({ type: "image", base64: b64 })) : [];
+
+  // render các ảnh của user
+  if (hadImages) {
+    pendingImages.forEach(b64 => {
+      appendBubble("", "user", b64, null);
+      messages.push({ role:"user", content:"", image_url:b64, image_id:null, video_url:null, video_id:null, ts:Date.now() });
+    });
+  }
+  if (text) {
+    appendBubble(text, "user");
+    messages.push({ role:"user", content:text, ts:Date.now() });
+  }
+  messages = await saveMessagesIDB(messages);
+
+  resetComposer();
+
+  const node = appendBubble("", "assistant");
+  setStatusChip(node, "thinking");
+
+  try {
+    // ép truyền attachmentsOverride để /api/chat/stream hoặc /api/chat nhận đủ ảnh
+    const result = await streamFromWebhook(sessionId, text, node, imagesCopy);
+    const finalText = typeof result === "string" ? result : result?.content || "";
+    if (finalText && finalText.trim()) {
+      messages.push({ role:"assistant", content:finalText, image_url:null, video_url:null, ts:Date.now() });
+    }
+    messages = await saveMessagesIDB(messages);
+  } catch (err) {
+    const msg = `Error (stream): ${String(err)}`;
+    (node.querySelector(".content .md") || node.querySelector(".content")).innerHTML = renderMarkdown(msg);
+    messages.push({ role:"assistant", content:msg, image_url:null, video_url:null, ts:Date.now() });
+    messages = await saveMessagesIDB(messages);
+  } finally {
+    setTimeout(() => setStatusChip(node, ""), 800);
+  }
+}
+
+      async function sendToWebhook(sessionId, message, targetNode, attachmentsOverride) {
+        const headers = { "Content-Type": "application/json", Accept: "application/json, text/plain, application/x-ndjson; charset=utf-8" };
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ sessionId, chatInput: message, attachments: attachmentsOverride || getAttachments() }),
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(`${res.status} ${t.slice(0, 200)}`);
+        }
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("application/json")) {
+          const data = await res.json().catch(() => null);
+          const editInstr = findMediaEditInstruction(data);
+          if (editInstr) {
+            (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML = renderMarkdown("🖼️ Editing image…");
+            await callMediaEditAndRender(editInstr, targetNode, getAttachments());
+            return { content: "" };
+          }
+          const instr = findMediaInstruction(data);
+          if (instr) {
+            (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML = renderMarkdown(instr.type === "image" ? "🖼️ Generating image…" : "🎬 Generating video…");
+            await callMediaAndRender(instr, targetNode);
+            return { content: "" };
+          }
+          const content = getPrimaryText(data);
+          (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML = renderMarkdown(content || "");
+          return { content };
+        }
+        const text = stripCodeFence(await res.text());
+        const editInstrText = findMediaEditInstruction(text) || extractMediaEditLoose(text);
+        if (editInstrText) {
+          (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML = renderMarkdown("🖼️ Editing image…");
+          await callMediaEditAndRender(editInstrText, targetNode, getAttachments());
+          return { content: "" };
+        }
+        const instrText = extractMediaLoose(text) || findMediaInstruction(text);
+        if (instrText) {
+          (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML = renderMarkdown(instrText.type === "image" ? "🖼️ Generating image…" : "🎬 Generating video…");
+          await callMediaAndRender(instrText, targetNode);
+          return { content: "" };
+        }
+        const dataObj = tryParseJSON(text.trim());
+        if (dataObj) {
+          const content = getPrimaryText(dataObj);
+          (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML = renderMarkdown(content || "");
+          return { content };
+        }
+        return renderStreamLikeText(text, targetNode, false);
+      }
+
+      function renderStreamLikeText(text, targetNode = null, markThought = false) {
+        const lines = text.split(/\r?\n/);
+        let acc = "";
+        for (const raw of lines) {
+          if (!raw) continue;
+          let line = raw.replace(/^\s*data\s*:\s?/, "");
+          if (!line) continue;
+          if (isOnlyBraces(line)) continue;
+
+          const editLoose = extractMediaEditLoose(line);
+          if (editLoose) { if (targetNode) callMediaEditAndRender(editLoose, targetNode, getAttachments()); continue; }
+
+          const loose = extractMediaLoose(line);
+          if (loose) { if (targetNode) callMediaAndRender(loose, targetNode); continue; }
+
+          if (line[0] === "{" || line[0] === "[") {
+            const obj = tryParseJSON(line);
+            if (obj) {
+              const editM = findMediaEditInstruction(obj);
+              if (editM) { if (targetNode) callMediaEditAndRender(editM, targetNode, getAttachments()); continue; }
+              const m = findMediaInstruction(obj);
+              if (m) { if (targetNode) callMediaAndRender(m, targetNode); continue; }
+              const chunk = getPrimaryText(obj);
+              if (chunk) acc += chunk;
+              continue;
+            }
+          }
+          acc += line + "\n";
+        }
+        if (targetNode) {
+          if (markThought) setStatusChip(targetNode, "thought");
+          (targetNode.querySelector(".content .md") || targetNode.querySelector(".content")).innerHTML =
+            renderMarkdown(stripDanglingBraces(stripMediaFromTextLoose(acc || "")));
+        }
+        return { content: stripDanglingBraces(stripMediaFromTextLoose(acc)) };
+      }
+
+      const inboxSend = document.getElementById("inboxSend");
+function toggleInboxSend() {
+  const hasText = !!inputEl.value.trim();
+  const hasImg = pendingImages.length > 0;
+  const canSend = hasText || hasImg;
+  if (inboxSend) { inboxSend.classList.toggle("show", canSend); inboxSend.disabled = !canSend; }
+}
+      inboxSend?.addEventListener("click", onSend);
+
+      inputEl.addEventListener("input", () => {
+        toggleInboxSend();
+        autosizeTextarea(inputEl);
+      });
+
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); return; }
+        if (e.key === "Escape" && pendingImages.length > 0) {
+          e.preventDefault();
+          fileInput.value = "";
+          clearPendingImages();
+          toggleInboxSend();
+        }
+      });
+
+      function autosizeTextarea(el) {
+        el.style.height = "auto";
+        const s = getComputedStyle(el);
+        const minH = parseFloat(s.minHeight) || 56;
+        const maxH = Math.round(innerHeight * 0.4);
+        const h = Math.min(Math.max(el.scrollHeight, minH), maxH);
+        el.style.height = h + "px";
+        el.style.overflowY = h >= maxH ? "auto" : "hidden";
+      }
+
+function shrinkPromptToMinHeight() {
+  // Chờ DOM apply class thay đổi rồi mới đo min-height
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      inputEl.style.height = "auto";
+      inputEl.style.overflowY = "hidden";
+      const s = getComputedStyle(inputEl);
+      const minH = parseFloat(s.minHeight) || 56;
+      inputEl.style.height = minH + "px";
+    });
+  });
+}
+
+      addEventListener("resize", () => autosizeTextarea(inputEl));
+      autosizeTextarea(inputEl);
+      toggleInboxSend();
+
+      chatEl.addEventListener("click", (e) => {
+        const a = e.target.closest("a"); if (!a) return;
+        const href = a.getAttribute("href"); if (!href || href.startsWith("#")) return;
+        e.preventDefault(); a.setAttribute("rel","noopener"); a.setAttribute("target","_blank");
+        try { window.open(a.href, "_blank", "noopener,noreferrer"); } catch { a.click(); }
+      });
+
+      (function () {
+        const chatBox = document.getElementById("chat");
+        const scrollBtn = document.getElementById("scrollBtn");
+        const THRESHOLD = 120;
+        const isAtBottom = () => chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight <= 4;
+        const shouldShow = () => (chatBox.scrollHeight - chatBox.clientHeight > THRESHOLD) && !isAtBottom();
+        const updateBtn = () => { scrollBtn.classList.toggle("show", shouldShow()); };
+        chatBox.addEventListener("scroll", updateBtn, { passive: true });
+        new ResizeObserver(updateBtn).observe(chatBox);
+        new MutationObserver(updateBtn).observe(chatBox, { childList:true, subtree:true });
+        scrollBtn.addEventListener("click", () => { chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: "smooth" }); });
+        window.addEventListener("load", updateBtn);
+        updateBtn();
+      })();
+
+      async function boot() {
+        renderMarkdownSetup();
+        try {
+          messages = await loadMessagesIDB();
+          if (!Array.isArray(messages)) messages = [];
+          if (messages.length === 0) {
+            try { messages = JSON.parse(localStorage.getItem("ppsai_messages") || "[]"); } catch { messages = []; }
+          }
+        } catch { messages = []; }
+        messages = await saveMessagesIDB(messages);
+        renderHistorySync(messages);
+        autosizeTextarea(inputEl);
+        toggleInboxSend();
+      }
+      boot();
+    </script>
+  </body>
 </html>
