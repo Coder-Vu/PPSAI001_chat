@@ -139,7 +139,7 @@ if (!r.ok) return jErr(r.status, "gemini_error", txt || j);
 
     /* -------------------- VIDEO -------------------- */
     if (type === "video") {
-      const model = env.GEMINI_VIDEO_MODEL || "veo-3.0-generate-001"; // Model VEO 3.0
+      const model = env.GEMINI_VIDEO_MODEL || "veo-3.1-generate-preview"; // Model VEO 3.1
       const startUrl = `${base}/models/${model}:predictLongRunning`;
 
       const start = await fetchWithTimeout(startUrl, {
